@@ -135,6 +135,9 @@ export async function deletePayment(id: string, invoiceId: string): Promise<ApiR
 }
 
 export async function getInvoicePayments(invoiceId: string) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error, payments: [], summary: null }
+
   const supabase = await createClient()
 
   const { data: payments } = await supabase

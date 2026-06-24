@@ -22,7 +22,7 @@ function resolveTimeoutMs(timeoutMs?: number) {
 export function useIdleTimeout(options: UseIdleTimeoutOptions = {}) {
   const timeoutMs = resolveTimeoutMs(options.timeoutMs)
   const redirectTo = options.redirectTo ?? '/login'
-  const enabled = options.enabled ?? process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH !== 'true'
+  const enabled = options.enabled ?? true
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const supabaseRef = useRef(createClient())

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserRole } from '@/lib/auth/permissions'
+import { isDevAuthBypassEnabled } from '@/lib/auth/dev-bypass'
 import { RoleProvider } from '@/components/auth/role-provider'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
@@ -14,7 +15,7 @@ export default async function PlatformLayout({
 }: {
   children: React.ReactNode
 }) {
-  const devBypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
+  const devBypass = isDevAuthBypassEnabled()
 
   let role: UserRole = 'admin'
 

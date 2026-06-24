@@ -1,5 +1,12 @@
 import type { NextConfig } from 'next'
 
+if (
+  process.env.NODE_ENV === 'production' &&
+  process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
+) {
+  throw new Error('NEXT_PUBLIC_DEV_BYPASS_AUTH must not be set in production')
+}
+
 const nextConfig: NextConfig = {
   // In dev, write build output to /tmp to avoid macOS Spotlight interfering
   // with Next.js atomic file operations inside .next/

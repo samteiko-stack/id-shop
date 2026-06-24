@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { isDevAuthBypassEnabled } from '@/lib/auth/dev-bypass'
 
 /* Admin client — bypasses RLS. Server-side only. */
 export async function createAdminClient() {
@@ -17,8 +18,7 @@ export async function createAdminClient() {
 }
 
 export async function createClient() {
-  // In dev bypass mode use service role so RLS doesn't block reads
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
+  if (isDevAuthBypassEnabled()) {
     return createAdminClient()
   }
   return createCookieClient()

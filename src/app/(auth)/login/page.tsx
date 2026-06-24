@@ -10,11 +10,12 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertIcon } from '@/components/ui/alert'
 import Link from 'next/link'
 import { Loader2, AlertCircle } from '@/components/icons'
+import { safeRedirectPath } from '@/lib/auth/safe-redirect'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? '/dashboard'
+  const redirectTo = safeRedirectPath(searchParams.get('redirectTo'), '/dashboard')
   const deactivated = searchParams.get('error') === 'deactivated'
   const sessionExpired = searchParams.get('reason') === 'session_expired'
 

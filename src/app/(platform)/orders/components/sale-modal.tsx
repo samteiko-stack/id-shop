@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner'
 import type { Order, Customer, Product, OrderStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'
+import { updateOrder, softDeleteOrder } from '../actions'
 
 interface SaleModalProps {
   open: boolean
@@ -220,21 +221,14 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
     if (!confirm('Are you sure you want to delete this sale?')) return
 
     startTransition(async () => {
-      try {
-        const supabase = createClient()
-        const { error } = await supabase
-          .from('orders')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', orderId)
-
-        if (error) throw error
-
-        toast.success('Sale deleted successfully')
-        onOpenChange(false)
-        router.refresh()
-      } catch (error) {
-        toast.error('Failed to delete sale')
+      const result = await softDeleteOrder(orderId!)
+      if (result.error) {
+        toast.error(result.error)
+        return
       }
+      toast.success('Sale deleted successfully')
+      onOpenChange(false)
+      router.refresh()
     })
   }
 
@@ -274,60 +268,28 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
     if (!orderId || !order) return
 
     startTransition(async () => {
-      try {
-        const supabase = createClient()
-
-        // Update order
-        const { error: orderError } = await supabase
-          .from('orders')
-          .update({
-            customer_id: formData.customer_id,
-            status: order.status === 'fulfilled' || order.status === 'cancelled' ? order.status : formData.status,
-            notes: formData.sale_note,
-            order_tax: formData.order_tax,
-            order_discount: formData.order_discount,
-            shipping: formData.shipping,
-            payment_term: formData.payment_term,
-            warehouse: formData.warehouse,
-            sale_note: formData.sale_note,
-            staff_note: formData.staff_note,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', orderId)
-
-        if (orderError) throw orderError
-
-        // Delete existing items
-        await supabase.from('order_items').delete().eq('order_id', orderId)
-
-        // Insert new items
-        const itemsToInsert = editItems
+      const result = await updateOrder(orderId, {
+        customer_id: formData.customer_id,
+        notes: formData.sale_note || null,
+        extra_discount_rate: 0,
+        items: editItems
           .filter((item) => item.product_id)
           .map((item) => ({
-            order_id: orderId,
             product_id: item.product_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
-            serial_no: item.serial_no,
-            discount: item.discount,
-          }))
+          })),
+      })
 
-        if (itemsToInsert.length > 0) {
-          const { error: itemsError } = await supabase
-            .from('order_items')
-            .insert(itemsToInsert)
-
-          if (itemsError) throw itemsError
-        }
-
-        toast.success('Sale updated successfully')
-        setMode('view')
-        fetchOrderData()
-        router.refresh()
-      } catch (error) {
-        console.error('Error updating order:', error)
-        toast.error('Failed to update sale')
+      if ('error' in result && result.error) {
+        toast.error(result.error)
+        return
       }
+
+      toast.success('Sale updated successfully')
+      setMode('view')
+      fetchOrderData()
+      router.refresh()
     })
   }
 

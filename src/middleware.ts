@@ -77,8 +77,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
 
-  /* ── Dev bypass — skips all auth and rate limiting ── */
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
+  /* ── Dev bypass — local only, server env (never NEXT_PUBLIC) ── */
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.DEV_BYPASS_AUTH === 'true'
+  ) {
     return NextResponse.next()
   }
 

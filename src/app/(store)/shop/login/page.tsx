@@ -11,11 +11,12 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertIcon } from '@/components/ui/alert'
 import { Loader2, AlertCircle, CheckCircle2 } from '@/components/icons'
 import { AuthBrandHeadline, AuthBrandPanel } from '@/components/auth/auth-brand-panel'
+import { safeRedirectPath } from '@/lib/auth/safe-redirect'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') ?? '/shop'
+  const redirectTo = safeRedirectPath(searchParams.get('redirectTo'), '/shop')
   const sessionExpired = searchParams.get('reason') === 'session_expired'
   const passwordReset = searchParams.get('passwordReset') === '1'
 

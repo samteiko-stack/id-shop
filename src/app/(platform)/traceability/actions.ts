@@ -5,6 +5,7 @@ import { productBatchSchema } from '@/lib/validators'
 import { writeAuditLog } from '@/lib/audit'
 import { requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { sanitizePostgrestSearch } from '@/lib/supabase/sanitize-search'
 
 export async function assignBatchToOrderItem(input: {
   product_id: string
@@ -80,10 +81,13 @@ export async function assignBatchToOrderItem(input: {
 }
 
 export async function searchTraceability(query: string) {
-  if (!query.trim()) return { data: [] }
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const q = sanitizePostgrestSearch(query)
+  if (!q) return { data: [] }
 
   const supabase = await createClient()
-  const q = query.trim()
 
   const { data, error } = await supabase
     .from('product_batches')
