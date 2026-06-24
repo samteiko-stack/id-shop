@@ -6,6 +6,7 @@ import { creditInvoiceSchema } from '@/lib/validators'
 import { writeAuditLog } from '@/lib/audit'
 import { requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { invalidateInvoicePdf } from '@/lib/pdf/serve-invoice-pdf'
 
 export async function createCreditInvoice(input: {
   invoice_id: string
@@ -89,6 +90,8 @@ export async function createCreditInvoice(input: {
     }))
   )
   if (itemsError) return { error: itemsError.message }
+
+  await invalidateInvoicePdf(supabase, invoice_id)
 
   await writeAuditLog({
     tableName: 'credit_invoices',

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { invalidateInvoicePdf } from '@/lib/pdf/serve-invoice-pdf'
 import type { ApiResponse, PaymentMethod } from '@/types'
 
 interface PaymentInput {
@@ -80,6 +81,8 @@ export async function addPayment(input: PaymentInput): Promise<ApiResponse> {
 
     if (error) return { error: error.message }
 
+    await invalidateInvoicePdf(supabase, input.invoice_id)
+
     const settlementAfter = await fetchInvoiceSettlement(supabase, input.invoice_id)
     if (settlementAfter && settlementAfter.balanceDue <= 0.001 && settlementAfter.refundDue <= 0.001) {
       await supabase
@@ -114,6 +117,8 @@ export async function deletePayment(id: string, invoiceId: string): Promise<ApiR
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  await invalidateInvoicePdf(supabase, invoiceId)
 
   const settlement = await fetchInvoiceSettlement(supabase, invoiceId)
   if (settlement) {
