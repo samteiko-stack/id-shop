@@ -101,11 +101,14 @@ export async function duplicateOrder(orderId: string) {
   const supabase = await createClient()
   const { data: originalOrder, error: fetchError } = await supabase
     .from('orders')
-    .select('*, items:order_items(product_id, quantity, unit_price, notes)')
+    .select('*, items:order_items(product_id, quantity, unit_price)')
     .eq('id', orderId)
+    .is('deleted_at', null)
     .single()
 
-  if (fetchError || !originalOrder) return { error: 'Order not found' }
+  if (fetchError || !originalOrder) {
+    return { error: fetchError?.message ?? 'Order not found' }
+  }
 
   // Generate new order number
   const { data: orderNumber, error: seqError } = await supabase
@@ -137,7 +140,6 @@ export async function duplicateOrder(orderId: string) {
     product_id: item.product_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
-    notes: item.notes,
   }))
 
   const { error: itemsError } = await supabase.from('order_items').insert(items)
