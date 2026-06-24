@@ -4,34 +4,37 @@ import {
   Page,
   Text,
   View,
+  Image,
   StyleSheet,
-  Line,
-  Svg,
   renderToBuffer,
 } from '@react-pdf/renderer'
 import type { Invoice } from '@/types'
 import { getCustomerFacingLineItems } from '@/lib/discounts'
-
-/* ─────────────────────────────────────────────
-   SWEDISH FAKTURA — ID Shop
-   Follows Swedish invoicing law (Fakturalagen)
-   ───────────────────────────────────────────── */
+import type { InvoiceSettlement } from '@/lib/invoice-settlement'
+import {
+  attachLotNumbersToItems,
+  formatLineDescription,
+  lotNumbersByProductId,
+  paymentStatusLabel,
+  SUPPLIER_LOGO,
+  type InvoiceCompanySettings,
+} from '@/lib/pdf/invoice-pdf-context'
 
 const C = {
-  brand:   '#0092b2',
-  dark:    '#0f1923',
-  mid:     '#4a5568',
-  light:   '#718096',
-  faint:   '#e8edf2',
-  white:   '#ffffff',
-  muted:   '#f7f9fb',
-  red:     '#c0392b',
+  brand: '#0092b2',
+  dark: '#0f1923',
+  mid: '#4a5568',
+  light: '#718096',
+  faint: '#e8edf2',
+  white: '#ffffff',
+  muted: '#f7f9fb',
+  red: '#c0392b',
 }
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 44,
-    paddingBottom: 80,
+    paddingTop: 36,
+    paddingBottom: 72,
     paddingHorizontal: 48,
     fontFamily: 'Helvetica',
     fontSize: 9,
@@ -39,120 +42,162 @@ const styles = StyleSheet.create({
     backgroundColor: C.white,
   },
 
-  /* ── Header ── */
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 28 },
-  logoBlock: { flex: 1 },
-  companyName: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: C.brand, marginBottom: 5 },
-  companyLine: { fontSize: 8.5, color: C.mid, lineHeight: 1.55 },
-
-  fakturaBlock: { alignItems: 'flex-end' },
-  fakturaLabel: { fontSize: 26, fontFamily: 'Helvetica-Bold', color: C.dark, letterSpacing: 1 },
-  fakturaNumber: { fontSize: 13, fontFamily: 'Helvetica-Bold', color: C.brand, marginTop: 2 },
-
-  /* ── Meta row (fakturadatum, förfallodatum, etc.) ── */
-  metaRow: {
+  header: {
     flexDirection: 'row',
-    backgroundColor: C.muted,
-    borderTop: `2px solid ${C.brand}`,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 20,
-    gap: 0,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 22,
   },
-  metaCell: { flex: 1, paddingHorizontal: 6 },
-  metaLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.light, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 3 },
-  metaValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.dark },
+  logo: { width: 150, height: 42, objectFit: 'contain' as const },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 20, flex: 1 },
+  supplierLogo: { width: 88, height: 88, objectFit: 'contain' as const },
+  headerRight: { alignItems: 'flex-end' },
+  headerMeta: { fontSize: 9, color: C.mid, marginTop: 2 },
 
-  /* ── Parties row ── */
-  partiesRow: { flexDirection: 'row', gap: 16, marginBottom: 22 },
+  partiesRow: { flexDirection: 'row', gap: 20, marginBottom: 18 },
   partyBlock: { flex: 1 },
-  partyLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.light, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 5, borderBottom: `1px solid ${C.faint}`, paddingBottom: 3 },
+  partyLabel: {
+    fontSize: 8,
+    fontFamily: 'Helvetica-Bold',
+    color: C.dark,
+    marginBottom: 4,
+  },
   partyName: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
   partyLine: { fontSize: 8.5, color: C.mid, lineHeight: 1.55 },
 
-  /* ── Table ── */
+  metaSide: { width: 170, marginBottom: 18 },
+  metaSideRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
+  metaSideLabel: { fontSize: 8.5, color: C.mid },
+  metaSideValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: C.dark },
+
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: C.dark,
-    paddingHorizontal: 8,
+    backgroundColor: C.muted,
+    borderTop: `1px solid ${C.faint}`,
+    borderBottom: `1px solid ${C.faint}`,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    marginBottom: 0,
   },
-  tableHeaderText: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: C.white, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tableRow: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 7, borderBottom: `1px solid ${C.faint}` },
+  tableHeaderText: {
+    fontSize: 7.5,
+    fontFamily: 'Helvetica-Bold',
+    color: C.dark,
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 6,
+    paddingVertical: 7,
+    borderBottom: `1px solid ${C.faint}`,
+  },
   tableRowAlt: { backgroundColor: C.muted },
-  tableCell: { fontSize: 9, color: C.dark },
+  tableCell: { fontSize: 8.5, color: C.dark },
 
-  colDesc:    { flex: 4 },
-  colQty:     { width: 36, textAlign: 'right' },
-  colUnit:    { width: 70, textAlign: 'right' },
-  colMoms:    { width: 46, textAlign: 'right' },
-  colTotal:   { width: 76, textAlign: 'right' },
+  colNr: { width: 18 },
+  colDesc: { flex: 3.2 },
+  colLot: { width: 58 },
+  colQty: { width: 42, textAlign: 'right' },
+  colUnit: { width: 58, textAlign: 'right' },
+  colTotal: { width: 62, textAlign: 'right' },
 
-  /* ── Totals ── */
-  totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 },
-  totalsBox: { width: 220 },
-  totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3.5, paddingHorizontal: 8 },
-  totalsLabel: { fontSize: 8.5, color: C.mid },
-  totalsValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
-  momsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, paddingHorizontal: 8, backgroundColor: C.muted },
-  grandTotalBox: {
-    backgroundColor: C.brand,
+  totalsSection: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 8 },
+  totalsBox: { width: 230 },
+  totalsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    paddingHorizontal: 4,
+  },
+  totalsLabel: { fontSize: 8.5, color: C.mid },
+  totalsValue: { fontSize: 8.5, fontFamily: 'Helvetica-Bold' },
+  grandTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderTop: `1px solid ${C.faint}`,
     marginTop: 2,
   },
-  grandTotalLabel: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.white },
-  grandTotalValue: { fontSize: 11, fontFamily: 'Helvetica-Bold', color: C.white },
+  grandTotalLabel: { fontSize: 9.5, fontFamily: 'Helvetica-Bold' },
+  grandTotalValue: { fontSize: 9.5, fontFamily: 'Helvetica-Bold' },
 
-  /* ── Moms summary table ── */
-  momsTable: { marginTop: 14, marginBottom: 14 },
-  momsTableHeader: { flexDirection: 'row', borderBottom: `1px solid ${C.faint}`, paddingBottom: 4, paddingHorizontal: 0 },
+  momsTable: { marginTop: 12, marginBottom: 10 },
+  momsTableHeader: {
+    flexDirection: 'row',
+    borderBottom: `1px solid ${C.faint}`,
+    paddingBottom: 4,
+  },
   momsTableRow: { flexDirection: 'row', paddingVertical: 3 },
-  momsTableLabel: { fontSize: 7.5, fontFamily: 'Helvetica-Bold', color: C.light, textTransform: 'uppercase', letterSpacing: 0.4 },
+  momsTableLabel: {
+    fontSize: 7.5,
+    fontFamily: 'Helvetica-Bold',
+    color: C.light,
+    textTransform: 'uppercase',
+  },
   momsTableValue: { fontSize: 8.5 },
   mColSats: { width: 50 },
   mColUnder: { width: 80, textAlign: 'right' },
   mColMoms: { width: 70, textAlign: 'right' },
   mColTotal: { width: 80, textAlign: 'right' },
 
-  /* ── Payment section ── */
   paymentSection: {
-    borderTop: `2px solid ${C.brand}`,
-    paddingTop: 12,
-    marginTop: 10,
-  },
-  paymentTitle: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: C.brand, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
-  paymentRow: { flexDirection: 'row', gap: 24 },
-  paymentBlock: { flex: 1 },
-  paymentLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.light, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 },
-  paymentValue: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.dark },
-  paymentSub: { fontSize: 8, color: C.mid, marginTop: 2 },
-
-  /* ── Notes ── */
-  notes: { marginTop: 16, paddingTop: 10, borderTop: `1px solid ${C.faint}` },
-  notesLabel: { fontSize: 7, fontFamily: 'Helvetica-Bold', color: C.light, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  notesText: { fontSize: 8.5, color: C.mid, lineHeight: 1.55 },
-
-  /* ── Footer ── */
-  footer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 48,
-    right: 48,
     borderTop: `1px solid ${C.faint}`,
-    paddingTop: 8,
+    paddingTop: 10,
+    marginTop: 8,
+  },
+  paymentTitle: {
+    fontSize: 8.5,
+    fontFamily: 'Helvetica-Bold',
+    color: C.dark,
+    marginBottom: 6,
+  },
+  paymentRow: { flexDirection: 'row', gap: 16 },
+  paymentBlock: { flex: 1 },
+  paymentLabel: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    color: C.light,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  paymentValue: { fontSize: 9.5, fontFamily: 'Helvetica-Bold', color: C.dark },
+
+  notes: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: C.muted,
+    borderRadius: 2,
+  },
+  notesLabel: {
+    fontSize: 7.5,
+    fontFamily: 'Helvetica-Bold',
+    color: C.dark,
+    marginBottom: 3,
+  },
+  notesText: { fontSize: 8.5, color: C.mid, lineHeight: 1.5 },
+
+  footerBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: C.brand,
+    paddingVertical: 10,
+    paddingHorizontal: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
-  footerText: { fontSize: 7.5, color: C.light },
+  footerCol: { flex: 1 },
+  footerText: { fontSize: 7.5, color: C.white, lineHeight: 1.45 },
 })
 
-/* ── Helpers ── */
 function formatSEK(amount: number): string {
-  return new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount) + ' kr'
+  return (
+    new Intl.NumberFormat('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+      amount,
+    ) + ' kr'
+  )
 }
 
 function formatDate(d: string | null | undefined): string {
@@ -160,154 +205,187 @@ function formatDate(d: string | null | undefined): string {
   return new Date(d).toLocaleDateString('sv-SE')
 }
 
-/** Swedish OCR: invoice number digits only, right-padded to 16, with Luhn check digit */
-function formatOCR(invoiceNumber: string): string {
-  const digits = invoiceNumber.replace(/\D/g, '').slice(-10).padStart(10, '0')
-  return digits
+function formatDateTime(d: string | null | undefined): string {
+  if (!d) return '—'
+  return new Date(d).toLocaleString('sv-SE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
-/* ── Types ── */
-export interface SwedishCompany {
-  name:         string
-  address:      string
-  org_number:   string   // Organisationsnummer: 556xxx-xxxx
-  vat_number:   string   // Momsreg.nr: SE556xxxxxxxx01
-  phone:        string
-  email:        string
-  bankgiro:     string   // e.g. 1234-5678
-  payment_terms_days?: number
+function formatOCR(invoiceNumber: string): string {
+  return invoiceNumber.replace(/\D/g, '').slice(-10).padStart(10, '0')
 }
+
+export interface SwedishCompany extends InvoiceCompanySettings {}
 
 interface GenerateInvoicePDFOptions {
-  invoice: Invoice & { items: any[]; customer: any }
-  company: SwedishCompany
+  invoice: Invoice & { items: any[]; customer: any; order?: any }
+  company: InvoiceCompanySettings
+  settlement?: InvoiceSettlement
 }
 
-/* ── Document ── */
-function FakturaDocument({ invoice, company }: GenerateInvoicePDFOptions) {
+function FakturaDocument({ invoice, company, settlement }: GenerateInvoicePDFOptions) {
   const currency = invoice.currency ?? 'SEK'
   const paymentDays = company.payment_terms_days ?? 30
   const ocr = formatOCR(invoice.invoice_number)
   const discountRate = Number((invoice as any).discount_rate ?? 0)
   const extraDiscountRate = Number((invoice as any).extra_discount_rate ?? 0)
   const extraDiscountAmount = Number((invoice as any).extra_discount_amount ?? 0)
-  const facingItems = getCustomerFacingLineItems(invoice.items ?? [], discountRate)
+
+  const lotMap = lotNumbersByProductId(invoice.order?.items ?? [])
+  const itemsWithLots = attachLotNumbersToItems(invoice.items ?? [], lotMap)
+  const facingItems = getCustomerFacingLineItems(itemsWithLots, discountRate)
   const netSubtotal = facingItems.reduce((sum, item) => sum + item.net_line_total, 0)
   const taxableSubtotal = Math.max(0, netSubtotal - extraDiscountAmount)
 
-  const seller = [
-    company.address,
-    company.org_number ? `Org.nr: ${company.org_number}` : null,
-    company.vat_number ? `Momsreg.nr: ${company.vat_number}` : null,
-    company.phone,
-    company.email,
-  ].filter(Boolean).join('\n')
+  const paid = settlement?.paid ?? 0
+  const balance = settlement?.balanceDue ?? Number(invoice.total)
+  const paymentStatus = paymentStatusLabel(settlement?.status ?? 'unpaid')
+
+  const customerOrg =
+    invoice.customer?.org_number?.trim() ||
+    invoice.customer?.tax_id?.trim() ||
+    null
+
+  const noteText =
+    invoice.notes?.trim() ||
+    customerOrg ||
+    null
 
   const buyer = [
     invoice.customer?.address,
-    invoice.customer?.tax_id ? `Org.nr: ${invoice.customer.tax_id}` : null,
-    invoice.customer?.email,
-    invoice.customer?.phone,
-  ].filter(Boolean).join('\n')
+    customerOrg ? `Org.nr: ${customerOrg}` : null,
+    invoice.customer?.phone ? `Tel: ${invoice.customer.phone}` : null,
+    invoice.customer?.email ? `E-post: ${invoice.customer.email}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const issueDateTime = invoice.issue_date
+    ? `${formatDate(invoice.issue_date)} 12:00`
+    : formatDateTime(invoice.created_at)
 
   return (
     <Document title={`Faktura ${invoice.invoice_number}`} author={company.name}>
       <Page size="A4" style={styles.page}>
-
-        {/* ── Header ── */}
         <View style={styles.header}>
-          <View style={styles.logoBlock}>
-            <Text style={styles.companyName}>{company.name}</Text>
-            <Text style={styles.companyLine}>{seller}</Text>
+          <View style={styles.logoRow}>
+            {company.logo_src ? (
+              <Image src={company.logo_src} style={styles.logo} />
+            ) : (
+              <Text style={{ fontSize: 18, fontFamily: 'Helvetica-Bold', color: C.brand }}>
+                {company.name}
+              </Text>
+            )}
+            <Image src={SUPPLIER_LOGO} style={styles.supplierLogo} />
           </View>
-          <View style={styles.fakturaBlock}>
-            <Text style={styles.fakturaLabel}>FAKTURA</Text>
-            <Text style={styles.fakturaNumber}>{invoice.invoice_number}</Text>
-          </View>
-        </View>
-
-        {/* ── Meta row ── */}
-        <View style={styles.metaRow}>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Fakturanummer</Text>
-            <Text style={styles.metaValue}>{invoice.invoice_number}</Text>
-          </View>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Fakturadatum</Text>
-            <Text style={styles.metaValue}>{formatDate(invoice.issue_date)}</Text>
-          </View>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Förfallodatum</Text>
-            <Text style={styles.metaValue}>{formatDate(invoice.due_date)}</Text>
-          </View>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Betalningsvillkor</Text>
-            <Text style={styles.metaValue}>{paymentDays} dagar netto</Text>
-          </View>
-          <View style={styles.metaCell}>
-            <Text style={styles.metaLabel}>Valuta</Text>
-            <Text style={styles.metaValue}>{currency}</Text>
+          <View style={styles.headerRight}>
+            <Text style={{ fontSize: 9, color: C.mid }}>Fakturanummer:</Text>
+            <Text style={{ fontSize: 11, fontFamily: 'Helvetica-Bold' }}>{invoice.invoice_number}</Text>
           </View>
         </View>
 
-        {/* ── Parties ── */}
-        <View style={styles.partiesRow}>
-          <View style={styles.partyBlock}>
-            <Text style={styles.partyLabel}>Säljare</Text>
-            <Text style={styles.partyName}>{company.name}</Text>
-            <Text style={styles.partyLine}>{seller}</Text>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <View style={{ flex: 1 }}>
+            <View style={styles.partiesRow}>
+              <View style={styles.partyBlock}>
+                <Text style={styles.partyLabel}>Till:</Text>
+                <Text style={styles.partyName}>{invoice.customer?.name ?? '—'}</Text>
+                <Text style={styles.partyLine}>{buyer || '—'}</Text>
+              </View>
+              <View style={styles.partyBlock}>
+                <Text style={styles.partyLabel}>Från:</Text>
+                <Text style={styles.partyName}>{company.name}</Text>
+                <Text style={styles.partyLine}>{company.address || '—'}</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.partyBlock}>
-            <Text style={styles.partyLabel}>Köpare / Faktureras till</Text>
-            <Text style={styles.partyName}>{invoice.customer?.name ?? '—'}</Text>
-            <Text style={styles.partyLine}>{buyer || '—'}</Text>
+
+          <View style={styles.metaSide}>
+            <View style={styles.metaSideRow}>
+              <Text style={styles.metaSideLabel}>Datum:</Text>
+              <Text style={styles.metaSideValue}>{issueDateTime}</Text>
+            </View>
+            <View style={styles.metaSideRow}>
+              <Text style={styles.metaSideLabel}>Fakturanummer:</Text>
+              <Text style={styles.metaSideValue}>{invoice.invoice_number}</Text>
+            </View>
+            <View style={styles.metaSideRow}>
+              <Text style={styles.metaSideLabel}>Betalningsstatus:</Text>
+              <Text style={styles.metaSideValue}>{paymentStatus}</Text>
+            </View>
+            <View style={styles.metaSideRow}>
+              <Text style={styles.metaSideLabel}>Förfallodatum:</Text>
+              <Text style={styles.metaSideValue}>{formatDate(invoice.due_date)}</Text>
+            </View>
           </View>
         </View>
 
-        {/* ── Line items ── */}
         <View style={styles.tableHeader}>
+          <Text style={{ ...styles.tableHeaderText, ...styles.colNr }}>Nr</Text>
           <Text style={{ ...styles.tableHeaderText, ...styles.colDesc }}>Beskrivning</Text>
-          <Text style={{ ...styles.tableHeaderText, ...styles.colQty }}>Ant.</Text>
+          <Text style={{ ...styles.tableHeaderText, ...styles.colLot }}>Lot.nr</Text>
+          <Text style={{ ...styles.tableHeaderText, ...styles.colQty }}>Antal</Text>
           <Text style={{ ...styles.tableHeaderText, ...styles.colUnit }}>À-pris</Text>
-          <Text style={{ ...styles.tableHeaderText, ...styles.colMoms }}>Moms%</Text>
           <Text style={{ ...styles.tableHeaderText, ...styles.colTotal }}>Belopp</Text>
         </View>
 
         {facingItems.map((item: any, i: number) => (
           <View key={i} style={[styles.tableRow, i % 2 === 1 ? styles.tableRowAlt : {}]}>
-            <Text style={{ ...styles.tableCell, ...styles.colDesc }}>{item.description}</Text>
-            <Text style={{ ...styles.tableCell, ...styles.colQty }}>{String(item.quantity)}</Text>
-            <Text style={{ ...styles.tableCell, ...styles.colUnit }}>{formatSEK(item.net_unit_price)}</Text>
-            <Text style={{ ...styles.tableCell, ...styles.colMoms }}>{invoice.tax_rate ?? 25}%</Text>
-            <Text style={{ ...styles.tableCell, ...styles.colTotal }}>{formatSEK(item.net_line_total)}</Text>
+            <Text style={{ ...styles.tableCell, ...styles.colNr }}>{i + 1}</Text>
+            <Text style={{ ...styles.tableCell, ...styles.colDesc }}>
+              {formatLineDescription(item)}
+            </Text>
+            <Text style={{ ...styles.tableCell, ...styles.colLot }}>{item.lot_numbers || '—'}</Text>
+            <Text style={{ ...styles.tableCell, ...styles.colQty }}>
+              {Number(item.quantity).toFixed(2)} st
+            </Text>
+            <Text style={{ ...styles.tableCell, ...styles.colUnit }}>
+              {formatSEK(item.net_unit_price)}
+            </Text>
+            <Text style={{ ...styles.tableCell, ...styles.colTotal }}>
+              {formatSEK(item.net_line_total)}
+            </Text>
           </View>
         ))}
 
-        {/* ── Totals ── */}
         <View style={styles.totalsSection}>
           <View style={styles.totalsBox}>
             <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>Netto (exkl. moms)</Text>
+              <Text style={styles.totalsLabel}>Summa ({currency})</Text>
               <Text style={styles.totalsValue}>{formatSEK(netSubtotal)}</Text>
             </View>
             {extraDiscountRate > 0 && (
               <View style={styles.totalsRow}>
                 <Text style={styles.totalsLabel}>Extrarabatt ({extraDiscountRate}%)</Text>
-                <Text style={[styles.totalsValue, { color: C.red }]}>−{formatSEK(extraDiscountAmount)}</Text>
+                <Text style={[styles.totalsValue, { color: C.red }]}>
+                  −{formatSEK(extraDiscountAmount)}
+                </Text>
               </View>
             )}
-            <View style={styles.momsRow}>
-              <Text style={styles.totalsLabel}>Moms {invoice.tax_rate ?? 25}%</Text>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Moms ({currency})</Text>
               <Text style={styles.totalsValue}>{formatSEK(invoice.tax_amount)}</Text>
             </View>
-            <View style={styles.grandTotalBox}>
-              <Text style={styles.grandTotalLabel}>Att betala</Text>
+            <View style={styles.grandTotalRow}>
+              <Text style={styles.grandTotalLabel}>Totalt belopp ({currency})</Text>
               <Text style={styles.grandTotalValue}>{formatSEK(invoice.total)}</Text>
+            </View>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>Betalt ({currency})</Text>
+              <Text style={styles.totalsValue}>{formatSEK(paid)}</Text>
+            </View>
+            <View style={styles.grandTotalRow}>
+              <Text style={styles.grandTotalLabel}>Saldo ({currency})</Text>
+              <Text style={styles.grandTotalValue}>{formatSEK(balance)}</Text>
             </View>
           </View>
         </View>
 
-        {/* ── Moms specification ── */}
         <View style={styles.momsTable}>
           <View style={styles.momsTableHeader}>
             <Text style={{ ...styles.momsTableLabel, ...styles.mColSats }}>Momssats</Text>
@@ -316,14 +394,21 @@ function FakturaDocument({ invoice, company }: GenerateInvoicePDFOptions) {
             <Text style={{ ...styles.momsTableLabel, ...styles.mColTotal }}>Ink. moms</Text>
           </View>
           <View style={styles.momsTableRow}>
-            <Text style={{ ...styles.momsTableValue, ...styles.mColSats }}>{invoice.tax_rate ?? 25}%</Text>
-            <Text style={{ ...styles.momsTableValue, ...styles.mColUnder }}>{formatSEK(taxableSubtotal)}</Text>
-            <Text style={{ ...styles.momsTableValue, ...styles.mColMoms }}>{formatSEK(invoice.tax_amount)}</Text>
-            <Text style={{ ...styles.momsTableValue, ...styles.mColTotal }}>{formatSEK(invoice.total)}</Text>
+            <Text style={{ ...styles.momsTableValue, ...styles.mColSats }}>
+              {invoice.tax_rate ?? 25}%
+            </Text>
+            <Text style={{ ...styles.momsTableValue, ...styles.mColUnder }}>
+              {formatSEK(taxableSubtotal)}
+            </Text>
+            <Text style={{ ...styles.momsTableValue, ...styles.mColMoms }}>
+              {formatSEK(invoice.tax_amount)}
+            </Text>
+            <Text style={{ ...styles.momsTableValue, ...styles.mColTotal }}>
+              {formatSEK(invoice.total)}
+            </Text>
           </View>
         </View>
 
-        {/* ── Payment info ── */}
         <View style={styles.paymentSection}>
           <Text style={styles.paymentTitle}>Betalningsinformation</Text>
           <View style={styles.paymentRow}>
@@ -331,41 +416,49 @@ function FakturaDocument({ invoice, company }: GenerateInvoicePDFOptions) {
               <View style={styles.paymentBlock}>
                 <Text style={styles.paymentLabel}>Bankgiro</Text>
                 <Text style={styles.paymentValue}>{company.bankgiro}</Text>
-                <Text style={styles.paymentSub}>Bankgirocentralen BGC AB</Text>
               </View>
             ) : null}
             <View style={styles.paymentBlock}>
-              <Text style={styles.paymentLabel}>OCR-nummer / Referens</Text>
+              <Text style={styles.paymentLabel}>OCR / Referens</Text>
               <Text style={styles.paymentValue}>{ocr}</Text>
-              <Text style={styles.paymentSub}>Ange vid betalning</Text>
             </View>
             <View style={styles.paymentBlock}>
-              <Text style={styles.paymentLabel}>Förfallodatum</Text>
-              <Text style={styles.paymentValue}>{formatDate(invoice.due_date)}</Text>
-              <Text style={styles.paymentSub}>Belopp att betala</Text>
-            </View>
-            <View style={styles.paymentBlock}>
-              <Text style={styles.paymentLabel}>Att betala</Text>
-              <Text style={[styles.paymentValue, { color: C.brand }]}>{formatSEK(invoice.total)}</Text>
+              <Text style={styles.paymentLabel}>Betalningsvillkor</Text>
+              <Text style={styles.paymentValue}>{paymentDays} dagar netto</Text>
             </View>
           </View>
         </View>
 
-        {/* ── Notes ── */}
-        {invoice.notes ? (
+        {noteText ? (
           <View style={styles.notes}>
-            <Text style={styles.notesLabel}>Meddelande</Text>
-            <Text style={styles.notesText}>{invoice.notes}</Text>
+            <Text style={styles.notesLabel}>Meddelande:</Text>
+            <Text style={styles.notesText}>{noteText}</Text>
           </View>
         ) : null}
 
-        {/* ── Footer ── */}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerText}>{company.name} · Org.nr {company.org_number} · Momsreg.nr {company.vat_number}</Text>
-          <Text style={styles.footerText}>{company.email} · {company.phone}</Text>
-          <Text style={styles.footerText}>Sida 1</Text>
+        <View style={styles.footerBar} fixed>
+          <View style={styles.footerCol}>
+            <Text style={styles.footerText}>{company.name}</Text>
+            {company.org_number ? (
+              <Text style={styles.footerText}>{company.org_number}</Text>
+            ) : null}
+          </View>
+          <View style={styles.footerCol}>
+            <Text style={styles.footerText}>{company.address || '—'}</Text>
+          </View>
+          <View style={styles.footerCol}>
+            {company.phone ? <Text style={styles.footerText}>{company.phone}</Text> : null}
+            {company.email ? <Text style={styles.footerText}>{company.email}</Text> : null}
+          </View>
+          <View style={styles.footerCol}>
+            {company.bankgiro ? (
+              <Text style={styles.footerText}>Bankgiro: {company.bankgiro}</Text>
+            ) : null}
+            {company.f_skatt !== false ? (
+              <Text style={styles.footerText}>Godkänt för F-skatt</Text>
+            ) : null}
+          </View>
         </View>
-
       </Page>
     </Document>
   )

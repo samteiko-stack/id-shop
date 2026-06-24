@@ -8,6 +8,12 @@ import { revalidatePath } from 'next/cache'
 import { requireAdminAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { parseDefaultTaxRate } from '@/lib/tax'
+import { generateInvoicePDF } from '@/lib/pdf/invoice-generator'
+import {
+  buildSwedishCompany,
+  fetchInvoiceSettlement,
+  INVOICE_PDF_SELECT,
+} from '@/lib/pdf/invoice-pdf-context'
 
 export async function createInvoice(input: InvoiceInput) {
   const auth = await requireWriteAccess()
@@ -92,21 +98,28 @@ export async function sendInvoiceEmail(invoiceId: string) {
   const supabase = await createClient()
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
-    .select('*, customer:customers(name, email), items:invoice_items(*)')
+    .select(INVOICE_PDF_SELECT)
     .eq('id', invoiceId)
     .single()
 
   if (fetchError || !invoice) return { error: 'Invoice not found' }
   if (!invoice.customer?.email) return { error: 'Customer has no email address' }
 
-  // Get company settings
-  const { data: settings } = await supabase.from('settings').select('value').eq('key', 'company').single()
-  const company = (settings?.value as any) ?? { name: 'ID Shop' }
+  const [{ data: settings }, { data: invoiceSettings }] = await Promise.all([
+    supabase.from('settings').select('value').eq('key', 'company').single(),
+    supabase.from('settings').select('value').eq('key', 'invoice').single(),
+  ])
+  const company = buildSwedishCompany(settings?.value as Record<string, unknown>)
+  const invoiceSettingsValue = (invoiceSettings?.value ?? {}) as Record<string, number>
+  company.payment_terms_days = invoiceSettingsValue.payment_terms_days ?? company.payment_terms_days ?? 30
 
   try {
-    // Generate PDF
-    const { generateInvoicePDF } = await import('@/lib/pdf')
-    const pdfBuffer = await generateInvoicePDF({ ...invoice, customer: invoice.customer, items: invoice.items } as any, company)
+    const settlement = await fetchInvoiceSettlement(supabase, invoiceId, Number(invoice.total))
+    const pdfBuffer = await generateInvoicePDF({
+      invoice: invoice as any,
+      company,
+      settlement,
+    })
     
     const { Resend } = await import('resend')
     const resend = new Resend(process.env.RESEND_API_KEY)

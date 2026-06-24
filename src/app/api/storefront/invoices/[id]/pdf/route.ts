@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createCookieClient } from '@/lib/supabase/server'
-import { generateInvoicePDF, type SwedishCompany } from '@/lib/pdf/invoice-generator'
+import { generateInvoicePDF } from '@/lib/pdf/invoice-generator'
+import {
+  buildSwedishCompany,
+  fetchInvoiceSettlement,
+  INVOICE_PDF_SELECT,
+} from '@/lib/pdf/invoice-pdf-context'
 import { requireStorefrontCustomer } from '@/lib/storefront/customer-session'
 
 const BUCKET = 'invoices'
@@ -19,7 +24,7 @@ export async function GET(
 
   const { data: invoice, error } = await supabase
     .from('invoices')
-    .select('*, customer:customers(*), items:invoice_items(*, product:products(name, ref)), order:orders(order_number)')
+    .select(INVOICE_PDF_SELECT)
     .eq('id', id)
     .eq('customer_id', session.customer.id)
     .is('deleted_at', null)
@@ -29,36 +34,17 @@ export async function GET(
     return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
   }
 
-  if (invoice.pdf_url) {
-    const admin = await createAdminClient()
-    const { data: signed } = await admin.storage
-      .from(BUCKET)
-      .createSignedUrl(invoice.pdf_url, 3600)
+  const [{ data: settingsRow }, { data: invoiceSettingsRow }] = await Promise.all([
+    supabase.from('settings').select('value').eq('key', 'company').single(),
+    supabase.from('settings').select('value').eq('key', 'invoice').single(),
+  ])
 
-    if (signed?.signedUrl) {
-      return NextResponse.redirect(signed.signedUrl, { status: 302 })
-    }
-  }
+  const company = buildSwedishCompany(settingsRow?.value as Record<string, unknown>)
+  const invoiceSettings = (invoiceSettingsRow?.value ?? {}) as Record<string, number>
+  company.payment_terms_days = invoiceSettings.payment_terms_days ?? company.payment_terms_days ?? 30
 
-  const { data: settingsRow } = await supabase
-    .from('settings')
-    .select('value')
-    .eq('key', 'company')
-    .single()
-
-  const s = (settingsRow?.value ?? {}) as Record<string, string>
-  const company: SwedishCompany = {
-    name: s.name ?? 'ID Shop',
-    address: s.address ?? '',
-    org_number: s.org_number ?? s.tax_id ?? '',
-    vat_number: s.vat_number ?? (s.tax_id ? `SE${s.tax_id.replace(/\D/g, '')}01` : ''),
-    phone: s.phone ?? '',
-    email: s.email ?? '',
-    bankgiro: s.bankgiro ?? '',
-    payment_terms_days: s.payment_terms_days ? Number(s.payment_terms_days) : 30,
-  }
-
-  const pdfBuffer = await generateInvoicePDF({ invoice: invoice as any, company })
+  const settlement = await fetchInvoiceSettlement(supabase, id, Number(invoice.total))
+  const pdfBuffer = await generateInvoicePDF({ invoice: invoice as any, company, settlement })
 
   return new NextResponse(pdfBuffer as unknown as BodyInit, {
     status: 200,

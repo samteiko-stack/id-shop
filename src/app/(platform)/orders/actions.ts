@@ -239,7 +239,7 @@ export async function createInvoiceFromOrder(orderId: string) {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, customer_id, status, created_at, discount_rate, discount_amount, extra_discount_rate, extra_discount_amount, items:order_items(product_id, quantity, unit_price, product:products(name))')
+    .select('id, customer_id, status, created_at, discount_rate, discount_amount, extra_discount_rate, extra_discount_amount, items:order_items(product_id, quantity, unit_price, product:products(name, ref))')
     .eq('id', orderId)
     .is('deleted_at', null)
     .single()
@@ -310,7 +310,7 @@ export async function createInvoiceFromOrder(orderId: string) {
       tax_rate: taxRate,
       tax_amount: taxAmount,
       total,
-      currency: 'EUR',
+      currency: 'SEK',
       status: 'issued',
       issue_date: issueDate,
       created_by: auth.userId,
@@ -321,14 +321,19 @@ export async function createInvoiceFromOrder(orderId: string) {
   if (invoiceError) return { error: invoiceError.message }
 
   const { error: itemsError } = await supabase.from('invoice_items').insert(
-    items.map((item) => ({
-      invoice_id: invoice.id,
-      product_id: item.product_id ?? null,
-      description: item.product?.name ?? 'Item',
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      line_total: item.quantity * item.unit_price,
-    }))
+    items.map((item) => {
+      const ref = item.product?.ref?.trim()
+      const name = item.product?.name ?? 'Artikel'
+      const description = ref ? `${ref} - ${name}` : name
+      return {
+        invoice_id: invoice.id,
+        product_id: item.product_id ?? null,
+        description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        line_total: item.quantity * item.unit_price,
+      }
+    }),
   )
 
   if (itemsError) {
