@@ -6,7 +6,7 @@ import { productSchema, productFamilySchema, type ProductInput, type ProductFami
 import { slugify } from '@/lib/utils'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateStorefrontProducts } from '@/lib/storefront/revalidate-storefront'
-import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { revalidateDashboard, revalidateCatalogReference } from '@/lib/platform/revalidate-platform'
 
 export async function createProduct(input: ProductInput) {
   const auth = await requireWriteAccess()
@@ -32,6 +32,7 @@ export async function createProduct(input: ProductInput) {
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
   revalidateDashboard()
+  revalidateCatalogReference()
   revalidatePath('/products')
   return { data }
 }
@@ -61,6 +62,7 @@ export async function updateProduct(id: string, input: ProductInput) {
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
   revalidateDashboard()
+  revalidateCatalogReference()
   revalidatePath('/products')
   revalidatePath(`/products/${id}`)
   return { data }
@@ -99,6 +101,7 @@ export async function createProductFamily(input: ProductFamilyInput) {
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
   revalidateDashboard()
+  revalidateCatalogReference()
   revalidatePath('/products')
   return { data }
 }
@@ -121,6 +124,7 @@ export async function updateProductFamily(id: string, input: ProductFamilyInput)
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
   revalidateDashboard()
+  revalidateCatalogReference()
   revalidatePath('/products')
   return { data }
 }
@@ -134,6 +138,7 @@ export async function deleteProductFamily(id: string) {
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
   revalidateDashboard()
+  revalidateCatalogReference()
   revalidatePath('/products')
   return {}
 }

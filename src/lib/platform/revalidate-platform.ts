@@ -6,3 +6,16 @@ export function revalidateDashboard() {
   revalidatePath('/dashboard')
   revalidatePath('/orders')
 }
+
+export function revalidateCustomerReference() {
+  revalidateTag(PLATFORM_CACHE_TAGS.customers)
+}
+
+export function revalidateCatalogReference() {
+  revalidateTag(PLATFORM_CACHE_TAGS.categories)
+  revalidateTag(PLATFORM_CACHE_TAGS.families)
+}
+
+export function revalidateDiscountGroupReference() {
+  revalidateTag(PLATFORM_CACHE_TAGS.discountGroups)
+}

@@ -7,6 +7,7 @@ import type { InvoiceStatus } from '@/types'
 import { revalidatePath } from 'next/cache'
 import { requireAdminAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { parseDefaultTaxRate } from '@/lib/tax'
 
 export async function createInvoice(input: InvoiceInput) {
   const auth = await requireWriteAccess()
@@ -185,5 +186,29 @@ export async function sendInvoiceEmail(invoiceId: string) {
   } catch (err: any) {
     console.error('[Send Invoice Email]', err)
     return { error: err?.message ?? 'Failed to send email' }
+  }
+}
+
+export async function loadInvoiceCreateOptions() {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const [customersResult, ordersResult, taxRateResult] = await Promise.all([
+    supabase.from('customers').select('id, name').is('deleted_at', null).order('name'),
+    supabase
+      .from('orders')
+      .select('id, order_number, customer_id')
+      .eq('status', 'fulfilled')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(200),
+    supabase.from('settings').select('value').eq('key', 'default_tax_rate').single(),
+  ])
+
+  return {
+    customers: customersResult.data ?? [],
+    orders: ordersResult.data ?? [],
+    defaultTaxRate: parseDefaultTaxRate(taxRateResult.data?.value),
   }
 }

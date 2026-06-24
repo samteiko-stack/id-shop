@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { CustomersClient } from './customers-client'
+import { getCachedDiscountGroups } from '@/lib/platform/cached-reference-data'
 import type { Customer } from '@/types'
 
 export const metadata = { title: 'Customers' }
@@ -19,22 +20,17 @@ export default async function CustomersPage({
 
   const supabase = await createClient()
   
-  const [{ data: customers, count }, { data: discountGroups }] = await Promise.all([
+  const [{ data: customers, count }, discountGroups] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, name, email, phone, address, org_number, contact_person, website, auth_user_id, is_approved, tax_id, notes, discount_group_id, created_at, updated_at, deleted_at, discount_group:discount_groups(id, name, discount_rate)', { count: 'exact' })
+      .select('id, name, email, phone, address, org_number, contact_person, website, auth_user_id, is_approved, tax_id, notes, discount_group_id, created_at, discount_group:discount_groups(id, name, discount_rate)', { count: 'exact' })
       .is('deleted_at', null)
       .order('name')
       .range(from, to),
-    supabase
-      .from('discount_groups')
-      .select('id, name, discount_rate')
-      .is('deleted_at', null)
-      .eq('is_active', true)
-      .order('name'),
+    getCachedDiscountGroups(),
   ])
 
-  const all         = (customers as Customer[]) ?? []
+  const all         = (customers as unknown as Customer[]) ?? []
   const totalCount  = count ?? 0
   const totalPages  = Math.max(1, Math.ceil(totalCount / pageSize))
   const pending     = all.filter(c => c.auth_user_id && !c.is_approved)

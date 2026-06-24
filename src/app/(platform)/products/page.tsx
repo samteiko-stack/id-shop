@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ProductsClient } from './products-client'
+import { getCachedCategoryOptions, getCachedProductFamilies } from '@/lib/platform/cached-reference-data'
 import type { Product, Category, ProductFamily } from '@/types'
 
 export const metadata = { title: 'Products' }
@@ -18,15 +19,15 @@ export default async function ProductsPage({
   const to   = from + pageSize - 1
 
   const supabase = await createClient()
-  const [productsResult, categoriesResult, familiesResult] = await Promise.all([
+  const [productsResult, categories, families] = await Promise.all([
     supabase
       .from('products')
       .select('id, name, ref, description, category_id, family_id, unit_price, currency, is_active, image_url, product_family, display_order, brand, created_at, updated_at, category:categories(id, name)', { count: 'exact' })
       .is('deleted_at', null)
       .order('name')
       .range(from, to),
-    supabase.from('categories').select('id, name, parent_id').is('deleted_at', null).order('name'),
-    supabase.from('product_families').select('id, name, category_id, image_url, display_order, category:categories(id, name)').order('name'),
+    getCachedCategoryOptions(),
+    getCachedProductFamilies(),
   ])
 
   const totalCount = productsResult.count ?? 0
@@ -35,8 +36,8 @@ export default async function ProductsPage({
   return (
     <ProductsClient
       initialProducts={(productsResult.data as unknown as Product[]) ?? []}
-      categories={(categoriesResult.data as Category[]) ?? []}
-      families={(familiesResult.data as unknown as ProductFamily[]) ?? []}
+      categories={(categories as Category[]) ?? []}
+      families={(families as unknown as ProductFamily[]) ?? []}
       pagination={{ page, totalPages, totalCount, pageSize }}
     />
   )

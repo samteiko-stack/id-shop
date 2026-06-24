@@ -130,17 +130,6 @@ export async function resolveInvoicesForOrders(
     byOrderId.set(inv.order_id, list)
   }
 
-  const taxRate = await getDefaultTaxRate(supabase)
-
-  for (const order of orders) {
-    if (byOrderId.has(order.id)) continue
-
-    const resolved = await resolveOrderInvoices(supabase, order, { autoLink: true })
-    if (resolved.length > 0) {
-      byOrderId.set(order.id, resolved as NonNullable<typeof linkedInvoices>)
-    }
-  }
-
   return byOrderId
 }
 

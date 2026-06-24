@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { customerSchema, type CustomerInput } from '@/lib/validators'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
-import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { revalidateDashboard, revalidateCustomerReference } from '@/lib/platform/revalidate-platform'
 
 export async function createCustomer(input: CustomerInput) {
   const auth = await requireWriteAccess()
@@ -15,6 +15,7 @@ export async function createCustomer(input: CustomerInput) {
   const { data, error } = await supabase.from('customers').insert(parsed.data).select().single()
   if (error) return { error: error.message }
   revalidateDashboard()
+  revalidateCustomerReference()
   return { data }
 }
 
@@ -28,6 +29,7 @@ export async function updateCustomer(id: string, input: CustomerInput) {
   const { data, error } = await supabase.from('customers').update({ ...parsed.data, updated_at: new Date().toISOString() }).eq('id', id).select().single()
   if (error) return { error: error.message }
   revalidateDashboard()
+  revalidateCustomerReference()
   return { data }
 }
 
@@ -39,5 +41,6 @@ export async function softDeleteCustomer(id: string) {
   const { error } = await supabase.from('customers').update({ deleted_at: new Date().toISOString() }).eq('id', id)
   if (error) return { error: error.message }
   revalidateDashboard()
+  revalidateCustomerReference()
   return {}
 }

@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { InvoicesClient } from './invoices-client'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { parseDefaultTaxRate } from '@/lib/tax'
-import type { Invoice, Customer, Order } from '@/types'
+import { getCachedCustomerOptions } from '@/lib/platform/cached-reference-data'
+import type { Customer } from '@/types'
 
 export const metadata = { title: 'Invoices' }
 
@@ -21,47 +22,48 @@ export default async function InvoicesPage({
 
   const supabase = await createClient()
 
-  const [invoicesResult, paymentsResult, customersResult, ordersResult, taxRateResult] = await Promise.all([
+  const [invoicesResult, customers, taxRateResult] = await Promise.all([
     supabase
       .from('invoices')
       .select('id, invoice_number, order_id, customer_id, status, subtotal, tax_rate, tax_amount, total, currency, issue_date, due_date, sent_at, paid_at, created_at, customer:customers(id, name)', { count: 'exact' })
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(from, to),
-    supabase
-      .from('payments')
-      .select('invoice_id, amount')
-      .is('deleted_at', null),
-    supabase.from('customers').select('id, name').is('deleted_at', null).order('name'),
-    supabase.from('orders').select('id, order_number, customer_id, items:order_items(*, product:products(name, ref, unit_price))').eq('status', 'fulfilled').is('deleted_at', null).order('created_at', { ascending: false }),
+    getCachedCustomerOptions(),
     supabase.from('settings').select('value').eq('key', 'default_tax_rate').single(),
   ])
 
   const totalCount = invoicesResult.count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const defaultTaxRate = parseDefaultTaxRate(taxRateResult.data?.value)
-
-  let fromOrder = null
-  if (params.from_order) {
-    const orderRes = await supabase
-      .from('orders')
-      .select('*, customer:customers(*), items:order_items(*, product:products(*))')
-      .eq('id', params.from_order)
-      .single()
-    fromOrder = orderRes.data
-  }
-
   const invoiceIds = (invoicesResult.data ?? []).map((inv) => inv.id)
 
-  const { data: credits } = invoiceIds.length > 0
-    ? await supabase
-        .from('credit_invoices')
-        .select('id, invoice_id, credit_number, total, status')
-        .in('invoice_id', invoiceIds)
-        .order('created_at', { ascending: false })
-    : { data: [] }
+  const [paymentsResult, creditsResult, fromOrderResult] = await Promise.all([
+    invoiceIds.length > 0
+      ? supabase
+          .from('payments')
+          .select('invoice_id, amount')
+          .in('invoice_id', invoiceIds)
+          .is('deleted_at', null)
+      : Promise.resolve({ data: [] as { invoice_id: string; amount: number }[] }),
+    invoiceIds.length > 0
+      ? supabase
+          .from('credit_invoices')
+          .select('id, invoice_id, credit_number, total, status')
+          .in('invoice_id', invoiceIds)
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    params.from_order
+      ? supabase
+          .from('orders')
+          .select('*, customer:customers(*), items:order_items(*, product:products(*))')
+          .eq('id', params.from_order)
+          .single()
+      : Promise.resolve({ data: null }),
+  ])
 
-  // Compute payment summary for each invoice
+  const fromOrder = fromOrderResult.data
+
   const payments = paymentsResult.data ?? []
   const paymentsByInvoice = payments.reduce((acc, p) => {
     if (!acc[p.invoice_id]) acc[p.invoice_id] = 0
@@ -69,7 +71,7 @@ export default async function InvoicesPage({
     return acc
   }, {} as Record<string, number>)
 
-  const creditRows = credits ?? []
+  const creditRows = creditsResult.data ?? []
 
   const creditsByInvoice = creditRows.reduce((acc, credit) => {
     if (!acc[credit.invoice_id]) {
@@ -101,8 +103,7 @@ export default async function InvoicesPage({
   return (
     <InvoicesClient
       initialInvoices={invoicesWithPayments as any}
-      customers={(customersResult.data as Customer[]) ?? []}
-      orders={(ordersResult.data as Order[]) ?? []}
+      customers={customers as Customer[]}
       fromOrder={fromOrder as any}
       defaultTaxRate={defaultTaxRate}
       pagination={{ page, totalPages, totalCount, pageSize: pageSize }}

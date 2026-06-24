@@ -3,11 +3,15 @@ import { OrdersClient } from './orders-client'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { resolveInvoicesForOrders } from '@/lib/order-invoices'
 import { getUnreadOrderIds } from '@/lib/notifications'
+import { getCachedCustomerOptions } from '@/lib/platform/cached-reference-data'
 import type { Order, Customer } from '@/types'
 
 export const metadata = { title: 'Sales' }
 
 const DEFAULT_PAGE_SIZE = 10
+
+const ORDER_LIST_SELECT =
+  'id, order_number, status, source, customer_id, created_at, discount_rate, discount_amount, extra_discount_rate, extra_discount_amount, customer:customers(id, name), items:order_items(quantity, unit_price)'
 
 export default async function OrdersPage({
   searchParams,
@@ -21,18 +25,17 @@ export default async function OrdersPage({
   const to   = from + pageSize - 1
 
   const supabase = await createClient()
-  const [ordersResult, customersResult, unreadOrderIds] = await Promise.all([
+  const [ordersResult, customers, unreadOrderIds] = await Promise.all([
     supabase
       .from('orders')
-      .select('*, customer:customers(id, name), items:order_items(quantity, unit_price)', { count: 'exact' })
+      .select(ORDER_LIST_SELECT, { count: 'exact' })
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(from, to),
-    supabase.from('customers').select('id, name').is('deleted_at', null).order('name'),
+    getCachedCustomerOptions(),
     getUnreadOrderIds(),
   ])
 
-  // Resolve invoices (including auto-linking orphaned invoices to their sale)
   const ordersForMatching = (ordersResult.data ?? []).map((order: any) => ({
     id: order.id,
     customer_id: order.customer_id,
@@ -85,7 +88,6 @@ export default async function OrdersPage({
     })
   }
 
-  // Merge invoice data into orders
   const ordersWithPayments = (ordersResult.data || []).map((order: any) => {
     const invoiceData = invoiceMap.get(order.id)
     const itemsSubtotal = (order.items ?? []).reduce(
@@ -114,7 +116,7 @@ export default async function OrdersPage({
   return (
     <OrdersClient
       initialOrders={ordersWithPayments as any}
-      customers={(customersResult.data as Customer[]) ?? []}
+      customers={(customers as Customer[]) ?? []}
       pagination={{ page, totalPages, totalCount, pageSize: pageSize }}
       unreadOrderIds={[...unreadOrderIds]}
     />

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { categorySchema, type CategoryInput } from '@/lib/validators'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateStorefrontProducts } from '@/lib/storefront/revalidate-storefront'
+import { revalidateCatalogReference } from '@/lib/platform/revalidate-platform'
 
 export async function createCategory(input: CategoryInput) {
   const auth = await requireWriteAccess()
@@ -16,6 +17,7 @@ export async function createCategory(input: CategoryInput) {
   const { data, error } = await supabase.from('categories').insert(parsed.data).select().single()
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
+  revalidateCatalogReference()
   revalidatePath('/categories')
   revalidatePath('/products')
   return { data }
@@ -31,6 +33,7 @@ export async function updateCategory(id: string, input: CategoryInput) {
   const { data, error } = await supabase.from('categories').update({ ...parsed.data, updated_at: new Date().toISOString() }).eq('id', id).select().single()
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
+  revalidateCatalogReference()
   revalidatePath('/categories')
   revalidatePath('/products')
   return { data }
@@ -44,5 +47,6 @@ export async function softDeleteCategory(id: string) {
   const { error } = await supabase.from('categories').update({ deleted_at: new Date().toISOString() }).eq('id', id)
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
+  revalidateCatalogReference()
   return {}
 }

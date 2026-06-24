@@ -30,7 +30,7 @@ import { Plus, Search, FileText, Send, Loader2, Trash2, MoreHorizontal, Eye, Dow
 import { ConfirmDialog, type ConfirmVariant } from '@/components/ui/confirm-dialog'
 import Link from 'next/link'
 import { useRole } from '@/hooks/use-role'
-import { createInvoice, sendInvoiceEmail } from './actions'
+import { createInvoice, sendInvoiceEmail, loadInvoiceCreateOptions } from './actions'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Pagination } from '@/components/ui/pagination'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'
@@ -42,13 +42,12 @@ interface PaginationInfo { page: number; totalPages: number; totalCount: number;
 interface Props {
   initialInvoices: Invoice[]
   customers: Customer[]
-  orders: Order[]
   fromOrder?: any
   defaultTaxRate?: number
   pagination: PaginationInfo
 }
 
-export function InvoicesClient({ initialInvoices, customers, orders, fromOrder, defaultTaxRate = 0, pagination }: Props) {
+export function InvoicesClient({ initialInvoices, customers, fromOrder, defaultTaxRate = 0, pagination }: Props) {
   const router = useRouter()
   const { canWrite, canCreateInvoice, canCancelInvoice } = useRole()
   const [search, setSearch] = useState('')
@@ -64,6 +63,9 @@ export function InvoicesClient({ initialInvoices, customers, orders, fromOrder, 
     variant: ConfirmVariant
     onConfirm: () => void
   } | null>(null)
+  const [formCustomers, setFormCustomers] = useState<Customer[]>([])
+  const [formOrders, setFormOrders] = useState<Pick<Order, 'id' | 'order_number'>[]>([])
+  const [formOptionsLoading, setFormOptionsLoading] = useState(false)
 
   // Form state
   const [customerId, setCustomerId] = useState(fromOrder?.customer_id ?? '')
@@ -87,6 +89,29 @@ export function InvoicesClient({ initialInvoices, customers, orders, fromOrder, 
   useEffect(() => {
     if (canCreateInvoice && fromOrder) setDialogOpen(true)
   }, [canCreateInvoice, fromOrder])
+
+  useEffect(() => {
+    if (!dialogOpen || !canCreateInvoice || formCustomers.length > 0) return
+
+    let cancelled = false
+    setFormOptionsLoading(true)
+    void loadInvoiceCreateOptions().then((result) => {
+      if (cancelled) return
+      if ('error' in result && result.error) {
+        toast.error(result.error)
+        setFormOptionsLoading(false)
+        return
+      }
+      setFormCustomers((result.customers ?? []) as Customer[])
+      setFormOrders((result.orders ?? []) as Pick<Order, 'id' | 'order_number'>[])
+      if (typeof result.defaultTaxRate === 'number') setTaxRate(result.defaultTaxRate)
+      setFormOptionsLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [dialogOpen, canCreateInvoice, formCustomers.length])
 
   const filtered = useMemo(() => {
     return initialInvoices.filter((i) => {
@@ -405,23 +430,23 @@ export function InvoicesClient({ initialInvoices, customers, orders, fromOrder, 
               <div className="space-y-2">
                 <Label>Customer *</Label>
                 <Combobox
-                  options={customers.map((c) => ({ value: c.id, label: c.name }))}
+                  options={formCustomers.map((c) => ({ value: c.id, label: c.name }))}
                   value={customerId}
                   onValueChange={setCustomerId}
-                  placeholder="Select customer"
+                  placeholder={formOptionsLoading ? 'Loading customers…' : 'Select customer'}
                   searchPlaceholder="Search customers…"
-                  disabled={isPending}
+                  disabled={isPending || formOptionsLoading}
                 />
               </div>
               <div className="space-y-2">
                 <Label>From Order (optional)</Label>
                 <Combobox
-                  options={[{ value: 'none', label: 'None' }, ...orders.map((o) => ({ value: o.id, label: o.order_number }))]}
+                  options={[{ value: 'none', label: 'None' }, ...formOrders.map((o) => ({ value: o.id, label: o.order_number }))]}
                   value={orderId || 'none'}
                   onValueChange={(v) => setOrderId(v === 'none' ? '' : v)}
-                  placeholder="Select order"
+                  placeholder={formOptionsLoading ? 'Loading orders…' : 'Select order'}
                   searchPlaceholder="Search orders…"
-                  disabled={isPending}
+                  disabled={isPending || formOptionsLoading}
                 />
               </div>
               <div className="space-y-2">

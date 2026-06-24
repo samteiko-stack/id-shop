@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { FamiliesClient } from './families-client'
+import { getCachedCategoryOptions } from '@/lib/platform/cached-reference-data'
 import type { Category, ProductFamily } from '@/types'
 
 export const metadata = { title: 'Product Families' }
@@ -21,17 +22,13 @@ export default async function FamiliesPage({
 
   const supabase = await createClient()
 
-  const [familiesResult, categoriesResult] = await Promise.all([
+  const [familiesResult, categories] = await Promise.all([
     supabase
       .from('product_families')
       .select('id, name, category_id, image_url, display_order, created_at, updated_at, category:categories(id, name)', { count: 'exact' })
       .order('name')
       .range(from, to),
-    supabase
-      .from('categories')
-      .select('id, name, parent_id')
-      .is('deleted_at', null)
-      .order('name'),
+    getCachedCategoryOptions(),
   ])
 
   const totalCount = familiesResult.count ?? 0
@@ -40,7 +37,7 @@ export default async function FamiliesPage({
   return (
     <FamiliesClient
       initialFamilies={(familiesResult.data as unknown as ProductFamily[]) ?? []}
-      categories={(categoriesResult.data as Category[]) ?? []}
+      categories={(categories as Category[]) ?? []}
       pagination={{ page, totalPages, totalCount, pageSize }}
     />
   )
