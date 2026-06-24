@@ -1,0 +1,48 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { createClient } from '@/lib/supabase/server'
+import { categorySchema, type CategoryInput } from '@/lib/validators'
+import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
+import { revalidateStorefrontProducts } from '@/lib/storefront/revalidate-storefront'
+
+export async function createCategory(input: CategoryInput) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const parsed = categorySchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message }
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('categories').insert(parsed.data).select().single()
+  if (error) return { error: error.message }
+  revalidateStorefrontProducts()
+  revalidatePath('/categories')
+  revalidatePath('/products')
+  return { data }
+}
+
+export async function updateCategory(id: string, input: CategoryInput) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const parsed = categorySchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message }
+  const supabase = await createClient()
+  const { data, error } = await supabase.from('categories').update({ ...parsed.data, updated_at: new Date().toISOString() }).eq('id', id).select().single()
+  if (error) return { error: error.message }
+  revalidateStorefrontProducts()
+  revalidatePath('/categories')
+  revalidatePath('/products')
+  return { data }
+}
+
+export async function softDeleteCategory(id: string) {
+  const auth = await requireDeleteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('categories').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+  if (error) return { error: error.message }
+  revalidateStorefrontProducts()
+  return {}
+}

@@ -1,0 +1,48 @@
+/* ─────────────────────────────────────────────
+   TIER 1 — PRIMITIVE COLOR TOKENS
+   Raw palette values. Never use these directly
+   in components — always use semantic tokens.
+   ───────────────────────────────────────────── */
+
+:root {
+  /* ── Brand (Teal) — derived from #0092b2 ── */
+  --brand-50:  oklch(0.97 0.012 217);
+  --brand-100: oklch(0.94 0.030 217);
+  --brand-200: oklch(0.88 0.055 217);
+  --brand-300: oklch(0.79 0.082 217);
+  --brand-400: oklch(0.71 0.102 217);
+  --brand-500: oklch(0.585 0.118 217); /* #0092b2 — main brand */
+  --brand-600: oklch(0.48 0.100 217);
+  --brand-700: oklch(0.38 0.080 217);
+  --brand-800: oklch(0.29 0.060 217);
+  --brand-900: oklch(0.20 0.042 217);
+  --brand-950: oklch(0.13 0.030 217);
+
+  /* ── Neutral (Cool Gray, slight blue tint) ── */
+  --neutral-50:  oklch(0.985 0.003 220);
+  --neutral-100: oklch(0.960 0.005 220);
+  --neutral-200: oklch(0.920 0.008 220);
+  --neutral-300: oklch(0.840 0.011 220);
+  --neutral-400: oklch(0.710 0.013 220);
+  --neutral-500: oklch(0.580 0.013 220);
+  --neutral-600: oklch(0.470 0.012 220);
+  --neutral-700: oklch(0.370 0.010 220);
+  --neutral-800: oklch(0.270 0.008 220);
+  --neutral-900: oklch(0.190 0.006 220);
+  --neutral-950: oklch(0.130 0.005 220);
+
+  /* ── Success (Green) ── */
+  --success-100: oklch(0.96 0.04 145);
+  --success-400: oklch(0.65 0.16 145);
+  --success-500: oklch(0.53 0.17 145);
+
+  /* ── Warning (Amber) ── */
+  --warning-100: oklch(0.97 0.04 85);
+  --warning-400: oklch(0.78 0.17 82);
+  --warning-500: oklch(0.68 0.18 78);
+
+  /* ── Destructive (Red) ── */
+  --destructive-100: oklch(0.97 0.02 22);
+  --destructive-400: oklch(0.64 0.19 22);
+  --destructive-500: oklch(0.54 0.22 22);
+}
