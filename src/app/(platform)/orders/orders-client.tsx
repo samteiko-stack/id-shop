@@ -20,7 +20,8 @@ import { Plus, Search, FileText, MoreHorizontal, Eye, Copy, Archive } from '@/co
 import Link from 'next/link'
 import { useRole } from '@/hooks/use-role'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { duplicateOrder, createInvoiceFromOrder, markOrderAsSeen, archiveOrder } from './actions'
+import { duplicateOrder, createInvoiceFromOrder, markOrderAsSeen, archiveOrder, getOrderArchiveHints } from './actions'
+import { formatArchiveWarnings } from '@/lib/platform/archive-guards'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'
@@ -41,6 +42,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
   const [isPending, startTransition] = useTransition()
   const [dismissedUnread, setDismissedUnread] = useState<Set<string>>(new Set())
   const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null)
+  const [archiveConfirmDescription, setArchiveConfirmDescription] = useState('')
   const [confirmBulkArchive, setConfirmBulkArchive] = useState(false)
 
   const unreadSet = useMemo(() => {
@@ -151,6 +153,23 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
         setSelectedIds(new Set())
         router.refresh()
       }
+    })
+  }
+
+  function promptArchive(orderId: string) {
+    startTransition(async () => {
+      const hints = await getOrderArchiveHints(orderId)
+      if (hints.error && !hints.warnings?.length) {
+        toast.error(hints.error)
+        return
+      }
+      setArchiveConfirmDescription(
+        formatArchiveWarnings(
+          hints.warnings,
+          'It will be removed from the sales list. You can restore it from Archive.',
+        ),
+      )
+      setArchiveConfirmId(orderId)
     })
   }
 
@@ -331,7 +350,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation()
-                setArchiveConfirmId(o.id)
+                promptArchive(o.id)
               }}
               className="gap-2 text-destructive focus:text-destructive"
             >
@@ -418,9 +437,14 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
 
       <ConfirmDialog
         open={!!archiveConfirmId}
-        onOpenChange={(open) => !open && setArchiveConfirmId(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiveConfirmId(null)
+            setArchiveConfirmDescription('')
+          }
+        }}
         title="Archive this sale?"
-        description="It will be removed from the sales list. You can restore it from Archive."
+        description={archiveConfirmDescription}
         confirmLabel="Archive"
         variant="destructive"
         onConfirm={() => {

@@ -7,6 +7,11 @@ import { slugify } from '@/lib/utils'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateStorefrontProducts } from '@/lib/storefront/revalidate-storefront'
 import { revalidateDashboard, revalidateCatalogReference } from '@/lib/platform/revalidate-platform'
+import {
+  getProductArchiveBlockers,
+  getProductFamilyDeleteBlockers,
+  getProductRestoreBlockers,
+} from '@/lib/platform/archive-guards'
 
 export async function createProduct(input: ProductInput) {
   const auth = await requireWriteAccess()
@@ -73,6 +78,10 @@ export async function softDeleteProduct(id: string) {
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const blockers = await getProductArchiveBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
+
   const { error } = await supabase
     .from('products')
     .update({ deleted_at: new Date().toISOString() })
@@ -100,6 +109,9 @@ export async function restoreProduct(id: string) {
     .single()
 
   if (!product) return { error: 'Archived product not found' }
+
+  const blockers = await getProductRestoreBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
 
   const { error } = await supabase
     .from('products')
@@ -167,6 +179,10 @@ export async function deleteProductFamily(id: string) {
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const blockers = await getProductFamilyDeleteBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
+
   const { error } = await supabase.from('product_families').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidateStorefrontProducts()

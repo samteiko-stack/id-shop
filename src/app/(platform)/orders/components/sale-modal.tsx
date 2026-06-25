@@ -31,7 +31,8 @@ import {
 import { toast } from 'sonner'
 import type { Order, Customer, Product, OrderStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'
-import { updateOrder, archiveOrder } from '../actions'
+import { updateOrder, archiveOrder, getOrderArchiveHints } from '../actions'
+import { formatArchiveWarnings } from '@/lib/platform/archive-guards'
 
 interface SaleModalProps {
   open: boolean
@@ -218,9 +219,18 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
   }
 
   function handleArchive() {
-    if (!confirm('Archive this sale? You can restore it from Archive.')) return
-
     startTransition(async () => {
+      const hints = await getOrderArchiveHints(orderId!)
+      if (hints.error && !hints.warnings?.length) {
+        toast.error(hints.error)
+        return
+      }
+      const message = formatArchiveWarnings(
+        hints.warnings,
+        'Archive this sale? You can restore it from Archive.',
+      )
+      if (!confirm(message)) return
+
       const result = await archiveOrder(orderId!)
       if (result.error) {
         toast.error(result.error)

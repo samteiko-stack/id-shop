@@ -5,6 +5,10 @@ import { createClient } from '@/lib/supabase/server'
 import { customerSchema, type CustomerInput } from '@/lib/validators'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard, revalidateCustomerReference } from '@/lib/platform/revalidate-platform'
+import {
+  getCustomerArchiveBlockers,
+  getCustomerRestoreBlockers,
+} from '@/lib/platform/archive-guards'
 
 export async function createCustomer(input: CustomerInput) {
   const auth = await requireWriteAccess()
@@ -39,6 +43,10 @@ export async function softDeleteCustomer(id: string) {
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const blockers = await getCustomerArchiveBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
+
   const { error } = await supabase.from('customers').update({ deleted_at: new Date().toISOString() }).eq('id', id)
   if (error) return { error: error.message }
   revalidateDashboard()
@@ -60,6 +68,9 @@ export async function restoreCustomer(id: string) {
     .single()
 
   if (!customer) return { error: 'Archived customer not found' }
+
+  const blockers = await getCustomerRestoreBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
 
   const { error } = await supabase
     .from('customers')

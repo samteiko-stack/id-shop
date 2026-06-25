@@ -6,6 +6,10 @@ import { categorySchema, type CategoryInput } from '@/lib/validators'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateStorefrontProducts } from '@/lib/storefront/revalidate-storefront'
 import { revalidateCatalogReference } from '@/lib/platform/revalidate-platform'
+import {
+  getCategoryArchiveBlockers,
+  getCategoryRestoreBlockers,
+} from '@/lib/platform/archive-guards'
 
 export async function createCategory(input: CategoryInput) {
   const auth = await requireWriteAccess()
@@ -44,6 +48,10 @@ export async function softDeleteCategory(id: string) {
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const blockers = await getCategoryArchiveBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
+
   const { error } = await supabase.from('categories').update({ deleted_at: new Date().toISOString() }).eq('id', id)
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
@@ -65,6 +73,9 @@ export async function restoreCategory(id: string) {
     .single()
 
   if (!category) return { error: 'Archived category not found' }
+
+  const blockers = await getCategoryRestoreBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
 
   const { error } = await supabase
     .from('categories')

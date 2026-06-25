@@ -10,6 +10,7 @@ import { resolveOrderInvoices, computeExpectedInvoiceTotal } from '@/lib/order-i
 import { computeOrderTotals } from '@/lib/discounts'
 import { requireAdminAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
+import { getOrderArchiveBlockers } from '@/lib/platform/archive-guards'
 import { parseDefaultTaxRate } from '@/lib/tax'
 import type { OrderStatus } from '@/types'
 
@@ -466,11 +467,24 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   return {}
 }
 
+export async function getOrderArchiveHints(orderId: string) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const result = await getOrderArchiveBlockers(supabase, orderId, auth.role)
+  if (result.error) return { error: result.error, warnings: result.warnings }
+  return { warnings: result.warnings ?? [] }
+}
+
 export async function archiveOrder(orderId: string) {
   const auth = await requireWriteAccess()
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const blockers = await getOrderArchiveBlockers(supabase, orderId, auth.role)
+  if (blockers.error) return { error: blockers.error }
 
   const { data: order } = await supabase
     .from('orders')

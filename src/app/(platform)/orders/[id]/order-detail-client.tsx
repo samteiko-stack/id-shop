@@ -20,7 +20,8 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 
 import { ArrowLeft, FileText, QrCode, CheckCircle2, XCircle, Loader2, Copy, MoreVertical, Printer, Pencil, FileMinus, Archive } from '@/components/icons'
-import { updateOrderStatus, duplicateOrder, createInvoiceFromOrder, revertOrderFulfillment, markOrderAsSeen, archiveOrder } from '../actions'
+import { updateOrderStatus, duplicateOrder, createInvoiceFromOrder, revertOrderFulfillment, markOrderAsSeen, archiveOrder, getOrderArchiveHints } from '../actions'
+import { formatArchiveWarnings } from '@/lib/platform/archive-guards'
 import { ConfirmDialog, type ConfirmVariant } from '@/components/ui/confirm-dialog'
 import { PageContainer } from '@/components/layout/page-container'
 
@@ -168,19 +169,27 @@ export function OrderDetailClient({
   }
 
   function handleArchive() {
-    setPendingConfirm({
-      title: 'Archive this sale?',
-      description: `${order.order_number} will be removed from the sales list. You can restore it from Archive.`,
-      confirmLabel: 'Archive',
-      variant: 'destructive',
-      onConfirm: () => {
-        startTransition(async () => {
-          const result = await archiveOrder(order.id)
-          if (result.error) { toast.error(result.error); return }
-          toast.success('Sale archived')
-          router.push('/orders')
-        })
-      },
+    startTransition(async () => {
+      const hints = await getOrderArchiveHints(order.id)
+      if (hints.error && !hints.warnings?.length) {
+        toast.error(hints.error)
+        return
+      }
+      const base = `${order.order_number} will be removed from the sales list. You can restore it from Archive.`
+      setPendingConfirm({
+        title: 'Archive this sale?',
+        description: formatArchiveWarnings(hints.warnings, base),
+        confirmLabel: 'Archive',
+        variant: 'destructive',
+        onConfirm: () => {
+          startTransition(async () => {
+            const result = await archiveOrder(order.id)
+            if (result.error) { toast.error(result.error); return }
+            toast.success('Sale archived')
+            router.push('/orders')
+          })
+        },
+      })
     })
   }
 

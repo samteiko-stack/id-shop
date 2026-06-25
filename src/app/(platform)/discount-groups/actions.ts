@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { discountGroupSchema, type DiscountGroupInput } from '@/lib/validators'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
+import { getDiscountGroupArchiveBlockers } from '@/lib/platform/archive-guards'
 
 export async function createDiscountGroup(input: DiscountGroupInput) {
   const auth = await requireWriteAccess()
@@ -53,6 +54,10 @@ export async function softDeleteDiscountGroup(id: string) {
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const blockers = await getDiscountGroupArchiveBlockers(supabase, id)
+  if (blockers.error) return { error: blockers.error }
+
   const { error } = await supabase
     .from('discount_groups')
     .update({ deleted_at: new Date().toISOString() })
@@ -69,6 +74,12 @@ export async function bulkArchiveDiscountGroups(ids: string[]) {
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  for (const id of ids) {
+    const blockers = await getDiscountGroupArchiveBlockers(supabase, id)
+    if (blockers.error) return { error: blockers.error }
+  }
+
   const { error } = await supabase
     .from('discount_groups')
     .update({ deleted_at: new Date().toISOString() })
