@@ -1,7 +1,24 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
+import { createClient } from '@/lib/supabase/server'
+import { shopMeta } from '@/lib/metadata'
 import { requireStorefrontCustomerOrRedirect } from '@/lib/storefront/customer-session'
 import { CustomerInvoiceDetailClient } from './customer-invoice-detail-client'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('invoice_number')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!invoice) return shopMeta.account
+  return shopMeta.invoiceDetail(invoice.invoice_number)
+}
 
 export default async function CustomerInvoiceDetailPage({
   params,

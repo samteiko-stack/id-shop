@@ -1,10 +1,8 @@
+import { shopMeta } from '@/lib/metadata'
 import { getCachedPublishedNewsPosts } from '@/lib/storefront/cached-queries'
 import { NyheterClient } from './nyheter-client'
 
-export const metadata = {
-  title: 'Nyheter — ID Shop',
-  description: 'Senaste nytt från ID Shop – produktnyheter, branschuppdateringar och tips för kliniker.',
-}
+export const metadata = shopMeta.news
 
 export default async function NyheterPage() {
   const posts = await getCachedPublishedNewsPosts()

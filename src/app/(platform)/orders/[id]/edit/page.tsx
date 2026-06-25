@@ -1,6 +1,22 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { platformMeta } from '@/lib/metadata'
 import { EditOrderClient } from './edit-order-client'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: order } = await supabase
+    .from('orders')
+    .select('order_number')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!order) return platformMeta.sales
+  return platformMeta.editSale(order.order_number)
+}
 
 export default async function EditOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

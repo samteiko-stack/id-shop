@@ -6,7 +6,9 @@ import { getUnreadOrderIds } from '@/lib/notifications'
 import { getCachedCustomerOptions } from '@/lib/platform/cached-reference-data'
 import type { Order, Customer } from '@/types'
 
-export const metadata = { title: 'Sales' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.sales
 
 const DEFAULT_PAGE_SIZE = 10
 

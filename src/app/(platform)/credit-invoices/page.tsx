@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { CreditInvoicesClient } from './credit-invoices-client'
 
-export const metadata = { title: 'Credit Invoices' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.creditInvoices
 
 const DEFAULT_PAGE_SIZE = 10
 

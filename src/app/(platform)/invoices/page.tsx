@@ -5,7 +5,9 @@ import { parseDefaultTaxRate } from '@/lib/tax'
 import { getCachedCustomerOptions } from '@/lib/platform/cached-reference-data'
 import type { Customer } from '@/types'
 
-export const metadata = { title: 'Invoices' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.invoices
 
 const DEFAULT_PAGE_SIZE = 10
 

@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { NewCreditInvoiceClient } from './new-credit-client'
 
-export const metadata = { title: 'New Credit Invoice' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.newCreditInvoice
 
 export default async function NewCreditInvoicePage({
   searchParams,

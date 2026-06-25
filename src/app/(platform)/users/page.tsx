@@ -3,7 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import { UserManagementClient } from './user-management-client'
 import type { User } from '@/types'
 
-export const metadata = { title: 'User Management' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.users
 
 export default async function UsersPage() {
   const supabase = await createClient()

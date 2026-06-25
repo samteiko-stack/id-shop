@@ -3,7 +3,9 @@ import { ArchiveOrdersClient } from './archive-client'
 import { getCachedCustomerOptions } from '@/lib/platform/cached-reference-data'
 import type { Customer } from '@/types'
 
-export const metadata = { title: 'Archived Sales' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.archivedSales
 
 const DEFAULT_PAGE_SIZE = 10
 

@@ -1,4 +1,7 @@
+import { platformMeta } from '@/lib/metadata'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+export const metadata = platformMeta.dashboard
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { getCachedDashboardData } from '@/lib/platform/cached-dashboard'

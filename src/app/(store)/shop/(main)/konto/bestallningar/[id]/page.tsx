@@ -1,7 +1,24 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { computeOrderTotals } from '@/lib/discounts'
+import { createClient } from '@/lib/supabase/server'
+import { shopMeta } from '@/lib/metadata'
 import { requireStorefrontCustomerOrRedirect } from '@/lib/storefront/customer-session'
 import { CustomerOrderDetailClient } from './customer-order-detail-client'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: order } = await supabase
+    .from('orders')
+    .select('order_number')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!order) return shopMeta.account
+  return shopMeta.orderDetail(order.order_number)
+}
 
 export default async function CustomerOrderDetailPage({
   params,

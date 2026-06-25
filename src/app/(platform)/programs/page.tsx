@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { ProgramsManagementClient } from './programs-management-client'
 import type { Course } from '@/types'
 
-export const metadata = { title: 'Programs Management' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.programs
 
 export default async function ProgramsManagementPage() {
   const supabase = await createClient()

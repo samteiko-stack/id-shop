@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { TraceabilityClient } from './traceability-client'
 
-export const metadata = { title: 'Traceability' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.traceability
 
 export default async function TraceabilityPage({
   searchParams,

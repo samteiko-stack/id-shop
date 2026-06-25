@@ -3,7 +3,9 @@ import { ProductsClient } from './products-client'
 import { getCachedCategoryOptions, getCachedProductFamilies } from '@/lib/platform/cached-reference-data'
 import type { Product, Category, ProductFamily } from '@/types'
 
-export const metadata = { title: 'Products' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.products
 
 const DEFAULT_PAGE_SIZE = 10
 

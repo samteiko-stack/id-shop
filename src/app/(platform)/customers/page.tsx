@@ -3,7 +3,9 @@ import { CustomersClient } from './customers-client'
 import { getCachedDiscountGroups } from '@/lib/platform/cached-reference-data'
 import type { Customer } from '@/types'
 
-export const metadata = { title: 'Customers' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.customers
 
 const DEFAULT_PAGE_SIZE = 10
 

@@ -1,9 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { DiscountGroupsClient } from './discount-groups-client'
 
-export const metadata = {
-  title: 'Discount Groups | Admin',
-}
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.discountGroups
 
 export default async function DiscountGroupsPage() {
   const supabase = await createClient()

@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { NewsManagementClient } from './news-management-client'
 import type { NewsPost } from '@/types'
 
-export const metadata = { title: 'News' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.news
 
 export default async function NewsManagementPage() {
   const supabase = await createClient()

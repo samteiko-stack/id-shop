@@ -6,7 +6,9 @@ import { formatDateTime } from '@/lib/utils'
 import { Shield } from '@/components/icons'
 import type { AuditLog } from '@/types'
 
-export const metadata = { title: 'Audit Log' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.auditLog
 
 export default async function AuditLogPage() {
   const supabase = await createClient()

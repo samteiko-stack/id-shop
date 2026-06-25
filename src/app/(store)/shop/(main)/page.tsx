@@ -1,7 +1,10 @@
+import { shopMeta } from '@/lib/metadata'
 import { createClient } from '@/lib/supabase/server'
 import { ShopClient } from './shop-client'
 import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
 import { getCachedShopCatalog } from '@/lib/storefront/cached-queries'
+
+export const metadata = shopMeta.catalog
 
 export default async function ShopPage() {
   const supabase = await createClient()

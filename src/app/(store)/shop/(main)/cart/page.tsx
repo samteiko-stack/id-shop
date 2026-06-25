@@ -1,6 +1,9 @@
+import { shopMeta } from '@/lib/metadata'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CartClient } from './cart-client'
+
+export const metadata = shopMeta.cart
 
 export default async function CartPage() {
   const supabase = await createClient()

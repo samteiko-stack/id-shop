@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { shopMeta } from '@/lib/metadata'
 import { ShopProductClient } from './shop-product-client'
 import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
 import { getCachedShopProduct } from '@/lib/storefront/cached-queries'
@@ -26,6 +28,14 @@ async function getCustomerContext() {
     customerId: customer?.id ?? null,
     discountRate,
   }
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const cached = await getCachedShopProduct(id)
+  if (!cached) return shopMeta.catalog
+  const { product } = cached
+  return shopMeta.product(product.name, product.ref)
 }
 
 export default async function ShopProductPage({ params }: { params: Promise<{ id: string }> }) {

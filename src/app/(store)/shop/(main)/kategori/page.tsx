@@ -2,10 +2,11 @@ import { Breadcrumb } from '@/components/ui/breadcrumb'
 import { CategoryCard } from '@/components/shop/category-card'
 import { StorefrontContainer } from '@/components/layout/storefront-container'
 import { StorefrontPageHero } from '@/components/storefront/storefront-page-hero'
+import { shopMeta } from '@/lib/metadata'
 import { getCachedTopCategories } from '@/lib/storefront/cached-queries'
 import type { Metadata } from 'next'
 
-export const metadata: Metadata = { title: 'Alla kategorier | Sortiment' }
+export const metadata: Metadata = shopMeta.categories
 
 export default async function AllCategoriesPage() {
   const topCategories = await getCachedTopCategories()

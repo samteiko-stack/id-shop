@@ -3,7 +3,9 @@ import { FamiliesClient } from './families-client'
 import { getCachedCategoryOptions } from '@/lib/platform/cached-reference-data'
 import type { Category, ProductFamily } from '@/types'
 
-export const metadata = { title: 'Product Families' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.families
 
 const DEFAULT_PAGE_SIZE = 10
 

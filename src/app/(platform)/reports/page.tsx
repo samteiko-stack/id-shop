@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { ReportsClient, type ReportData } from './reports-client'
 
-export const metadata = { title: 'Reports' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.reports
 
 async function getReportData(): Promise<ReportData> {
   const supabase = await createClient()

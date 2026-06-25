@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { ProgramsClient } from './programs-client'
 import { getCachedPublishedCourses } from '@/lib/storefront/cached-queries'
+import { shopMeta } from '@/lib/metadata'
 
-export const metadata = { title: 'Program — ID Shop' }
+export const metadata = shopMeta.programs
 
 export default async function ProgramsPage({
   searchParams,

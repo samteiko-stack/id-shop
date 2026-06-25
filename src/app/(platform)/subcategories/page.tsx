@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { SubcategoriesClient } from './subcategories-client'
 import type { Category } from '@/types'
 
-export const metadata = { title: 'Sub-categories' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.subcategories
 
 const DEFAULT_PAGE_SIZE = 10
 

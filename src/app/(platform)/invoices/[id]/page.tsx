@@ -1,7 +1,24 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { platformMeta } from '@/lib/metadata'
 import { InvoiceDetailClient } from './invoice-detail-client'
 import { getInvoicePayments } from './payment-actions'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('invoice_number, customer:customers(name)')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!invoice) return platformMeta.invoices
+  const customerName = (invoice.customer as { name?: string } | null)?.name
+  return platformMeta.invoiceDetail(invoice.invoice_number, customerName)
+}
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

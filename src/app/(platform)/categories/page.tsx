@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { CategoriesClient } from './categories-client'
 import type { Category } from '@/types'
 
-export const metadata = { title: 'Categories' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.categories
 
 export default async function CategoriesPage() {
   const supabase = await createClient()

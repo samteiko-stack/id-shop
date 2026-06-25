@@ -1,8 +1,11 @@
+import { shopMeta } from '@/lib/metadata'
 import { computeOrderTotals } from '@/lib/discounts'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { requireStorefrontCustomerOrRedirect } from '@/lib/storefront/customer-session'
 import type { AccountCustomer, AccountInvoiceRow, AccountOrderRow } from '@/lib/storefront/account-types'
 import { AccountClient } from './account-client'
+
+export const metadata = shopMeta.account
 
 function mapCustomer(raw: Record<string, unknown>): AccountCustomer {
   const discountGroup = raw.discount_group as { name: string; discount_rate: number } | { name: string; discount_rate: number }[] | null

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { platformMeta } from '@/lib/metadata'
 import { salePrintTitle } from '@/lib/sale-print'
 import { getOrderForPrint } from '@/lib/orders/print-data'
 import { OrderPrintDocument } from '@/components/orders/order-print-document'
@@ -19,12 +20,12 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .eq('id', id)
     .single()
 
-  if (!order) return { title: { absolute: 'Print Sale' } }
+  if (!order) return platformMeta.printSale('Sale')
 
+  const customerName = (order.customer as { name?: string })?.name
   return {
-    title: {
-      absolute: salePrintTitle(order.order_number, (order.customer as { name?: string })?.name),
-    },
+    title: { absolute: salePrintTitle(order.order_number, customerName) },
+    description: platformMeta.printSale(order.order_number, customerName).description,
   }
 }
 

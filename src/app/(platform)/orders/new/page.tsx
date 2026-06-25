@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { NewOrderClient } from './new-order-client'
 import type { Customer, Product } from '@/types'
 
-export const metadata = { title: 'New Order' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.newSale
 
 export default async function NewOrderPage() {
   const supabase = await createClient()

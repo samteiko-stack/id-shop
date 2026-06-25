@@ -1,7 +1,10 @@
+import { shopMeta } from '@/lib/metadata'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { HomepageClient } from '@/app/(store)/shop/(main)/homepage-client'
 import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
+
+export const metadata = shopMeta.home
 
 export default async function HomePage() {
   const supabase = await createClient()

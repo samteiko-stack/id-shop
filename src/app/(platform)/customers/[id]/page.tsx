@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { platformMeta } from '@/lib/metadata'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import Link from 'next/link'
@@ -21,6 +23,20 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
       </div>
     </div>
   )
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('name')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!customer) return platformMeta.customers
+  return platformMeta.customerDetail(customer.name)
 }
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {

@@ -2,7 +2,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { SettingsClient } from './settings-client'
 
-export const metadata = { title: 'Settings' }
+import { platformMeta } from '@/lib/metadata'
+
+export const metadata = platformMeta.settings
 
 export default async function SettingsPage() {
   const supabase = await createClient()

@@ -1,6 +1,22 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { platformMeta } from '@/lib/metadata'
 import { ProductDetailClient } from './product-detail-client'
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: product } = await supabase
+    .from('products')
+    .select('name, ref')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .maybeSingle()
+
+  if (!product) return platformMeta.products
+  return platformMeta.productDetail(product.name, product.ref)
+}
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

@@ -8,6 +8,7 @@ import { StorefrontPageHero } from '@/components/storefront/storefront-page-hero
 import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
 import { getCachedCategoryPageData } from '@/lib/storefront/cached-queries'
 import type { Metadata } from 'next'
+import { shopMeta } from '@/lib/metadata'
 
 interface PageProps {
   params: Promise<{ slug: string[] }>
@@ -16,9 +17,9 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const data = await getCachedCategoryPageData(slug)
-  if (!data) return { title: 'Kategori' }
+  if (!data) return shopMeta.categories
   const last = data.chain[data.chain.length - 1]
-  return { title: last.name + ' | Sortiment' }
+  return shopMeta.category(last.name)
 }
 
 async function getCustomerContext() {

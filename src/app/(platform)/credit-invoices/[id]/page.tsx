@@ -1,8 +1,10 @@
 import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
+import { platformMeta } from '@/lib/metadata'
 import { CreditDetailClient } from '@/app/(platform)/credit-invoices/[id]/credit-detail-client'
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
   const { data } = await supabase
@@ -11,7 +13,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .eq('id', id)
     .maybeSingle()
 
-  return { title: data?.credit_number ?? 'Credit Note' }
+  if (!data?.credit_number) return platformMeta.creditInvoices
+  return platformMeta.creditInvoiceDetail(data.credit_number)
 }
 
 export default async function CreditInvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {

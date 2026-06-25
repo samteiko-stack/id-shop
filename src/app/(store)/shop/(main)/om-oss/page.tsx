@@ -1,9 +1,8 @@
 import { AboutClient } from './about-client'
 
-export const metadata = {
-  title: 'Om oss — ID Shop',
-  description: 'Lär känna ID Shop – din partner för medicinska och dentala förbrukningsartiklar i Sverige.',
-}
+import { shopMeta } from '@/lib/metadata'
+
+export const metadata = shopMeta.about
 
 export default function AboutPage() {
   return <AboutClient />
