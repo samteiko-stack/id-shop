@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { safeRedirectPath } from '@/lib/auth/safe-redirect'
 import { Loader2 } from '@/components/icons'
 
 function AuthCallbackContent() {
@@ -12,7 +13,7 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const supabase = createClient()
-    const next = searchParams.get('next') ?? '/'
+    const next = safeRedirectPath(searchParams.get('next'), '/dashboard')
     let cancelled = false
 
     async function finish() {
@@ -26,7 +27,7 @@ function AuthCallbackContent() {
       if (tokenHash && type) {
         const { error: otpError } = await supabase.auth.verifyOtp({
           token_hash: tokenHash,
-          type: type as 'recovery' | 'email',
+          type: type as 'recovery' | 'email' | 'invite',
         })
         if (otpError) {
           if (!cancelled) setError('Länken är ogiltig eller har gått ut.')
@@ -40,6 +41,19 @@ function AuthCallbackContent() {
       if (code) {
         const { error: codeError } = await supabase.auth.exchangeCodeForSession(code)
         if (!codeError) {
+          await finish()
+          return
+        }
+      }
+
+      // Implicit flow: tokens arrive in the URL hash (#access_token=...)
+      if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+        const { data: { session }, error: hashError } = await supabase.auth.getSession()
+        if (hashError) {
+          if (!cancelled) setError('Länken är ogiltig eller har gått ut.')
+          return
+        }
+        if (session) {
           await finish()
           return
         }
@@ -80,8 +94,8 @@ function AuthCallbackContent() {
       <div className="min-h-dvh flex items-center justify-center bg-background px-6">
         <div className="max-w-sm text-center space-y-4">
           <p className="text-sm text-destructive">{error}</p>
-          <a href="/shop/reset-password" className="text-sm text-primary font-medium hover:underline">
-            Begär ny återställningslänk
+          <a href="/login" className="text-sm text-primary font-medium hover:underline">
+            Gå till inloggning
           </a>
         </div>
       </div>

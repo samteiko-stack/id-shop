@@ -16,7 +16,7 @@ export default async function UsersPage() {
 
   const { data: users, error } = await supabase
     .from('users')
-    .select('id, email, full_name, role, is_active, created_at, updated_at')
+    .select('id, email, full_name, role, is_active, invite_pending, created_at, updated_at')
     .neq('role', 'customer')
     .order('created_at', { ascending: false })
 

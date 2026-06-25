@@ -2,9 +2,10 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { validatePassword } from '@/lib/auth/password-rules'
+import { activateInvitedUser } from '@/app/(platform)/users/actions'
 import { Button } from '@/components/ui/button'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Label } from '@/components/ui/label'
@@ -14,6 +15,8 @@ import { AuthBrandHeadline, AuthBrandPanel } from '@/components/auth/auth-brand-
 
 function UpdatePasswordForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isInviteFlow = searchParams.get('flow') === 'invite'
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -67,6 +70,18 @@ function UpdatePasswordForm() {
       .maybeSingle()
 
     const role = profile?.role ?? user.user_metadata?.role
+
+    if (isInviteFlow && role !== 'customer') {
+      const activation = await activateInvitedUser()
+      if (activation.error) {
+        setError(activation.error)
+        setLoading(false)
+        return
+      }
+      router.push('/dashboard')
+      return
+    }
+
     await supabase.auth.signOut()
 
     if (role === 'customer') {

@@ -38,7 +38,7 @@ import { FilterSelect } from '@/components/ui/filter-select'
 import { getInitials, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import { UserPlus, MoreHorizontal, ShieldCheck, UserX, UserCheck, Loader2, AlertCircle, Search } from '@/components/icons'
-import { inviteUser, updateUserRole, toggleUserActive } from './actions'
+import { inviteUser, revokeInvite, updateUserRole, toggleUserActive } from './actions'
 import { ConfirmDialog, type ConfirmVariant } from '@/components/ui/confirm-dialog'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'
 
@@ -98,6 +98,25 @@ export function UserManagementClient({ initialUsers, error }: Props) {
       setInviteFullName('')
       setInviteRole('staff')
       router.refresh()
+    })
+  }
+
+  function handleRevokeInvite(userId: string) {
+    const user = users.find(u => u.id === userId)
+    setPendingConfirm({
+      title: 'Revoke invitation?',
+      description: `${user?.full_name ?? user?.email ?? 'This user'} will be removed and their invite link will stop working.`,
+      confirmLabel: 'Revoke invite',
+      variant: 'destructive',
+      onConfirm: () => {
+        startTransition(async () => {
+          const result = await revokeInvite(userId)
+          if (result.error) { toast.error(result.error); return }
+          setUsers(prev => prev.filter(u => u.id !== userId))
+          toast.success('Invitation revoked')
+          router.refresh()
+        })
+      },
     })
   }
 
@@ -193,8 +212,9 @@ export function UserManagementClient({ initialUsers, error }: Props) {
         u.email.toLowerCase().includes(q)
       const matchRole = roleFilter === 'all' || u.role === roleFilter
       const matchStatus = statusFilter === 'all' ||
-        (statusFilter === 'active' && u.is_active) ||
-        (statusFilter === 'inactive' && !u.is_active)
+        (statusFilter === 'active' && u.is_active && !u.invite_pending) ||
+        (statusFilter === 'pending' && u.invite_pending) ||
+        (statusFilter === 'inactive' && !u.is_active && !u.invite_pending)
       return matchSearch && matchRole && matchStatus
     })
   }, [users, search, roleFilter, statusFilter])
@@ -232,7 +252,11 @@ export function UserManagementClient({ initialUsers, error }: Props) {
       key: 'status',
       header: 'Status',
       cell: (user: User) =>
-        user.is_active ? (
+        user.invite_pending ? (
+          <Badge className="bg-[var(--status-unpaid-bg)] text-[var(--status-unpaid-fg)] border-0">
+            Invite pending
+          </Badge>
+        ) : user.is_active ? (
           <Badge className="bg-[var(--badge-success-bg)] text-[var(--badge-success-fg)] border-0">
             Active
           </Badge>
@@ -287,13 +311,23 @@ export function UserManagementClient({ initialUsers, error }: Props) {
               Set as Read Only
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleToggleActive(user.id, user.is_active)}
-              className={`gap-2 ${user.is_active ? 'text-destructive focus:text-destructive' : ''}`}
-            >
-              <UserX className="h-4 w-4" />
-              {user.is_active ? 'Deactivate' : 'Reactivate'}
-            </DropdownMenuItem>
+            {user.invite_pending ? (
+              <DropdownMenuItem
+                onClick={() => handleRevokeInvite(user.id)}
+                className="gap-2 text-destructive focus:text-destructive"
+              >
+                <UserX className="h-4 w-4" />
+                Revoke invite
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onClick={() => handleToggleActive(user.id, user.is_active)}
+                className={`gap-2 ${user.is_active ? 'text-destructive focus:text-destructive' : ''}`}
+              >
+                <UserX className="h-4 w-4" />
+                {user.is_active ? 'Deactivate' : 'Reactivate'}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -324,6 +358,7 @@ export function UserManagementClient({ initialUsers, error }: Props) {
           <FilterSelect className="w-36" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="all">All statuses</option>
             <option value="active">Active</option>
+            <option value="pending">Invite pending</option>
             <option value="inactive">Inactive</option>
           </FilterSelect>
         </div>

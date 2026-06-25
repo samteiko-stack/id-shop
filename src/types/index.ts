@@ -24,6 +24,7 @@ export interface User {
   full_name: string | null
   role: UserRole
   is_active: boolean
+  invite_pending: boolean
   created_at: string
   updated_at: string
 }
