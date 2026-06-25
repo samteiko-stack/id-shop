@@ -31,7 +31,7 @@ import {
 import { toast } from 'sonner'
 import type { Order, Customer, Product, OrderStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'
-import { updateOrder, softDeleteOrder } from '../actions'
+import { updateOrder, archiveOrder } from '../actions'
 
 interface SaleModalProps {
   open: boolean
@@ -217,16 +217,16 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
     fetchOrderData() // Reset form data
   }
 
-  function handleDelete() {
-    if (!confirm('Are you sure you want to delete this sale?')) return
+  function handleArchive() {
+    if (!confirm('Archive this sale? You can restore it from Sales → Archive.')) return
 
     startTransition(async () => {
-      const result = await softDeleteOrder(orderId!)
+      const result = await archiveOrder(orderId!)
       if (result.error) {
         toast.error(result.error)
         return
       }
-      toast.success('Sale deleted successfully')
+      toast.success('Sale archived')
       onOpenChange(false)
       router.refresh()
     })
@@ -519,16 +519,16 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
               </div>
               <div className="flex items-center gap-2">
                 {canWrite && !['fulfilled', 'cancelled'].includes(order.status) && (
-                  <>
-                    <Button onClick={handleEdit} size="sm" variant="secondary">
-                      <Edit3 className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button onClick={handleDelete} size="sm" variant="destructive">
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </>
+                  <Button onClick={handleEdit} size="sm" variant="secondary">
+                    <Edit3 className="h-4 w-4" />
+                    Edit
+                  </Button>
+                )}
+                {canWrite && (
+                  <Button onClick={handleArchive} size="sm" variant="destructive">
+                    <Trash2 className="h-4 w-4" />
+                    Archive
+                  </Button>
                 )}
               </div>
             </div>

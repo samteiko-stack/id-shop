@@ -19,8 +19,8 @@ import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
-import { ArrowLeft, FileText, QrCode, CheckCircle2, XCircle, Loader2, Copy, MoreVertical, Printer, Pencil, FileMinus } from '@/components/icons'
-import { updateOrderStatus, duplicateOrder, createInvoiceFromOrder, revertOrderFulfillment, markOrderAsSeen } from '../actions'
+import { ArrowLeft, FileText, QrCode, CheckCircle2, XCircle, Loader2, Copy, MoreVertical, Printer, Pencil, FileMinus, Archive } from '@/components/icons'
+import { updateOrderStatus, duplicateOrder, createInvoiceFromOrder, revertOrderFulfillment, markOrderAsSeen, archiveOrder } from '../actions'
 import { ConfirmDialog, type ConfirmVariant } from '@/components/ui/confirm-dialog'
 import { PageContainer } from '@/components/layout/page-container'
 
@@ -167,6 +167,23 @@ export function OrderDetailClient({
     })
   }
 
+  function handleArchive() {
+    setPendingConfirm({
+      title: 'Archive this sale?',
+      description: `${order.order_number} will be removed from the sales list. You can restore it from Archive.`,
+      confirmLabel: 'Archive',
+      variant: 'destructive',
+      onConfirm: () => {
+        startTransition(async () => {
+          const result = await archiveOrder(order.id)
+          if (result.error) { toast.error(result.error); return }
+          toast.success('Sale archived')
+          router.push('/orders')
+        })
+      },
+    })
+  }
+
   const allItemsTraced = order.items?.every((item: any) =>
     item.batches && item.batches.length > 0 &&
     item.batches.reduce((sum: number, b: any) => sum + b.quantity, 0) >= item.quantity
@@ -266,6 +283,15 @@ export function OrderDetailClient({
                     >
                       <XCircle className="h-4 w-4" />
                       Cancel
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {canWrite && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleArchive} className="gap-2 text-destructive focus:text-destructive">
+                      <Archive className="h-4 w-4" />
+                      Archive
                     </DropdownMenuItem>
                   </>
                 )}

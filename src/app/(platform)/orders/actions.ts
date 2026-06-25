@@ -8,7 +8,7 @@ import { orderSchema, type OrderInput } from '@/lib/validators'
 import { writeAuditLog } from '@/lib/audit'
 import { resolveOrderInvoices, computeExpectedInvoiceTotal } from '@/lib/order-invoices'
 import { computeOrderTotals } from '@/lib/discounts'
-import { requireAdminAccess, requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
+import { requireAdminAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { parseDefaultTaxRate } from '@/lib/tax'
 import type { OrderStatus } from '@/types'
@@ -466,16 +466,124 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   return {}
 }
 
-export async function softDeleteOrder(orderId: string) {
-  const auth = await requireDeleteAccess()
+export async function archiveOrder(orderId: string) {
+  const auth = await requireWriteAccess()
   if ('error' in auth) return { error: auth.error }
 
   const supabase = await createClient()
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, deleted_at')
+    .eq('id', orderId)
+    .is('deleted_at', null)
+    .single()
+
+  if (!order) return { error: 'Sale not found or already archived' }
+
   const { error } = await supabase
     .from('orders')
-    .update({ deleted_at: new Date().toISOString(), status: 'cancelled' })
+    .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', orderId)
+
   if (error) return { error: error.message }
+
+  revalidatePath('/orders')
+  revalidatePath('/orders/archive')
+  revalidatePath(`/orders/${orderId}`)
+  revalidateDashboard()
+  return {}
+}
+
+/** @deprecated Use archiveOrder */
+export async function softDeleteOrder(orderId: string) {
+  return archiveOrder(orderId)
+}
+
+export async function restoreOrder(orderId: string) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('id', orderId)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!order) return { error: 'Archived sale not found' }
+
+  const { error } = await supabase
+    .from('orders')
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq('id', orderId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/orders')
+  revalidatePath('/orders/archive')
+  revalidatePath(`/orders/${orderId}`)
+  revalidateDashboard()
+  return {}
+}
+
+export async function permanentDeleteOrder(orderId: string) {
+  const auth = await requireAdminAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      order_number,
+      deleted_at,
+      items:order_items(
+        id,
+        batches:order_item_batches(id)
+      )
+    `)
+    .eq('id', orderId)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!order) return { error: 'Archived sale not found' }
+
+  const hasBatches = (order.items ?? []).some(
+    (item: { batches?: unknown[] }) => (item.batches?.length ?? 0) > 0,
+  )
+  if (hasBatches) {
+    return { error: 'Cannot permanently delete: this sale has LOT/batch traceability records' }
+  }
+
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('id, invoice_number')
+    .eq('order_id', orderId)
+    .is('deleted_at', null)
+
+  for (const invoice of invoices ?? []) {
+    const { count } = await supabase
+      .from('payments')
+      .select('id', { count: 'exact', head: true })
+      .eq('invoice_id', invoice.id)
+      .is('deleted_at', null)
+
+    if ((count ?? 0) > 0) {
+      return {
+        error: `Cannot permanently delete: invoice ${invoice.invoice_number} has payments recorded`,
+      }
+    }
+  }
+
+  const { error } = await supabase.from('orders').delete().eq('id', orderId)
+  if (error) return { error: error.message }
+
+  revalidatePath('/orders')
+  revalidatePath('/orders/archive')
   revalidateDashboard()
   return {}
 }

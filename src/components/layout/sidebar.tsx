@@ -25,6 +25,7 @@ import {
   Settings,
   LogOut,
   Percent,
+  Archive,
 } from '@/components/icons'
 
 interface NavItem {
@@ -47,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: ShoppingCart,
     children: [
       { label: 'Sales', href: '/orders', icon: ShoppingCart },
+      { label: 'Archive', href: '/orders/archive', icon: Archive, roles: ['admin', 'staff'] },
       { label: 'Invoices', href: '/invoices', icon: FileText },
       { label: 'Credit Invoices', href: '/credit-invoices', icon: FileMinus, roles: ['admin', 'staff'] },
     ],

@@ -16,14 +16,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatDateTime, cn } from '@/lib/utils'
-import { Plus, Search, FileText, MoreHorizontal, Eye, Copy } from '@/components/icons'
+import { Plus, Search, FileText, MoreHorizontal, Eye, Copy, Archive } from '@/components/icons'
 import Link from 'next/link'
 import { useRole } from '@/hooks/use-role'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { duplicateOrder, createInvoiceFromOrder, markOrderAsSeen } from './actions'
+import { duplicateOrder, createInvoiceFromOrder, markOrderAsSeen, archiveOrder } from './actions'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'
-import { createExportAction, createDuplicateAction } from '@/lib/bulk-actions'
+import { createExportAction, createDuplicateAction, createArchiveAction } from '@/lib/bulk-actions'
 import { Badge } from '@/components/ui/badge'
 interface PaginationInfo { page: number; totalPages: number; totalCount: number; pageSize: number }
 
@@ -39,6 +40,8 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
   const { canWrite } = useRole()
   const [isPending, startTransition] = useTransition()
   const [dismissedUnread, setDismissedUnread] = useState<Set<string>>(new Set())
+  const [archiveConfirmId, setArchiveConfirmId] = useState<string | null>(null)
+  const [confirmBulkArchive, setConfirmBulkArchive] = useState(false)
 
   const unreadSet = useMemo(() => {
     const set = new Set(unreadOrderIds)
@@ -148,6 +151,25 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
         setSelectedIds(new Set())
         router.refresh()
       }
+    })
+  }
+
+  function doArchive(ids: string[]) {
+    startTransition(async () => {
+      const errors: string[] = []
+      for (const id of ids) {
+        const result = await archiveOrder(id)
+        if (result.error) errors.push(result.error)
+      }
+      if (errors.length > 0) {
+        toast.error(errors[0] ?? 'Failed to archive sales')
+      } else {
+        toast.success(`Archived ${ids.length} sale(s)`)
+        setSelectedIds(new Set())
+        router.refresh()
+      }
+      setArchiveConfirmId(null)
+      setConfirmBulkArchive(false)
     })
   }
 
@@ -305,6 +327,17 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
                 </DropdownMenuItem>
               )
             )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                setArchiveConfirmId(o.id)
+              }}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <Archive className="h-4 w-4" />
+              Archive
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -348,11 +381,17 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
           )}
         </div>
         {canWrite && (
-          <Link href="/orders/new">
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />New Sale
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ButtonLink href="/orders/archive" variant="outline" className="gap-2">
+              <Archive className="h-4 w-4" />
+              Archive
+            </ButtonLink>
+            <Link href="/orders/new">
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />New Sale
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
       
@@ -363,6 +402,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
           actions={[
             createExportAction(handleBulkExport),
             createDuplicateAction(handleBulkDuplicate, isPending),
+            createArchiveAction(() => setConfirmBulkArchive(true), isPending),
           ]}
         />
       )}
@@ -382,6 +422,29 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
       />
       <Pagination {...pagination} />
 
+      <ConfirmDialog
+        open={!!archiveConfirmId}
+        onOpenChange={(open) => !open && setArchiveConfirmId(null)}
+        title="Archive this sale?"
+        description="It will be removed from the sales list. You can restore it from Archive."
+        confirmLabel="Archive"
+        variant="destructive"
+        onConfirm={() => {
+          if (archiveConfirmId) doArchive([archiveConfirmId])
+        }}
+        loading={isPending}
+      />
+
+      <ConfirmDialog
+        open={confirmBulkArchive}
+        onOpenChange={setConfirmBulkArchive}
+        title={`Archive ${selectedIds.size} sale(s)?`}
+        description="Selected sales will move to the archive. You can restore them later."
+        confirmLabel="Archive"
+        variant="destructive"
+        onConfirm={() => doArchive(Array.from(selectedIds))}
+        loading={isPending}
+      />
     </div>
   )
 }
