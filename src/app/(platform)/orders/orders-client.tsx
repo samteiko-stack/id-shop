@@ -4,7 +4,7 @@ import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Order, Customer, OrderStatus } from '@/types'
 import { DataTable } from '@/components/tables/data-table'
-import { Button, ButtonLink } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { Pagination } from '@/components/ui/pagination'
@@ -381,17 +381,11 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
           )}
         </div>
         {canWrite && (
-          <div className="flex items-center gap-2">
-            <ButtonLink href="/orders/archive" variant="outline" className="gap-2">
-              <Archive className="h-4 w-4" />
-              Archive
-            </ButtonLink>
-            <Link href="/orders/new">
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />New Sale
-              </Button>
-            </Link>
-          </div>
+          <Link href="/orders/new">
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />New Sale
+            </Button>
+          </Link>
         )}
       </div>
       

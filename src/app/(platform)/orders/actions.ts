@@ -487,7 +487,7 @@ export async function archiveOrder(orderId: string) {
     .eq('id', orderId)
 
   if (error) return { error: error.message }
-
+  revalidatePath('/archive')
   revalidatePath('/orders')
   revalidatePath('/orders/archive')
   revalidatePath(`/orders/${orderId}`)
@@ -521,7 +521,7 @@ export async function restoreOrder(orderId: string) {
     .eq('id', orderId)
 
   if (error) return { error: error.message }
-
+  revalidatePath('/archive')
   revalidatePath('/orders')
   revalidatePath('/orders/archive')
   revalidatePath(`/orders/${orderId}`)
@@ -581,7 +581,7 @@ export async function permanentDeleteOrder(orderId: string) {
 
   const { error } = await supabase.from('orders').delete().eq('id', orderId)
   if (error) return { error: error.message }
-
+  revalidatePath('/archive')
   revalidatePath('/orders')
   revalidatePath('/orders/archive')
   revalidateDashboard()

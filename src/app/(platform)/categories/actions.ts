@@ -48,5 +48,34 @@ export async function softDeleteCategory(id: string) {
   if (error) return { error: error.message }
   revalidateStorefrontProducts()
   revalidateCatalogReference()
+  revalidatePath('/archive')
+  return {}
+}
+
+export async function restoreCategory(id: string) {
+  const auth = await requireDeleteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const { data: category } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!category) return { error: 'Archived category not found' }
+
+  const { error } = await supabase
+    .from('categories')
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+  revalidateStorefrontProducts()
+  revalidateCatalogReference()
+  revalidatePath('/categories')
+  revalidatePath('/subcategories')
+  revalidatePath('/archive')
   return {}
 }

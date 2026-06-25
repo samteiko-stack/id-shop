@@ -79,6 +79,39 @@ export async function softDeleteProduct(id: string) {
     .eq('id', id)
 
   if (error) return { error: error.message }
+  revalidateStorefrontProducts()
+  revalidateDashboard()
+  revalidateCatalogReference()
+  revalidatePath('/products')
+  revalidatePath('/archive')
+  return {}
+}
+
+export async function restoreProduct(id: string) {
+  const auth = await requireDeleteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const { data: product } = await supabase
+    .from('products')
+    .select('id')
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!product) return { error: 'Archived product not found' }
+
+  const { error } = await supabase
+    .from('products')
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+  revalidateStorefrontProducts()
+  revalidateDashboard()
+  revalidateCatalogReference()
+  revalidatePath('/products')
+  revalidatePath('/archive')
   return {}
 }
 

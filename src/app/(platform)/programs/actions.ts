@@ -72,5 +72,34 @@ export async function deleteCourse(id: string): Promise<ApiResponse> {
 
   revalidateStorefrontCourses()
   revalidatePath('/programs')
+  revalidatePath('/archive')
+  return {}
+}
+
+export async function restoreCourse(id: string): Promise<ApiResponse> {
+  const auth = await requireDeleteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data: course } = await supabase
+    .from('courses')
+    .select('slug')
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!course) return { error: 'Archived program not found' }
+
+  const { error } = await supabase
+    .from('courses')
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidateStorefrontCourses(course.slug)
+  revalidatePath('/programs')
+  revalidatePath('/archive')
   return {}
 }

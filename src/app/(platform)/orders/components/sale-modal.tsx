@@ -218,7 +218,7 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
   }
 
   function handleArchive() {
-    if (!confirm('Archive this sale? You can restore it from Sales → Archive.')) return
+    if (!confirm('Archive this sale? You can restore it from Archive.')) return
 
     startTransition(async () => {
       const result = await archiveOrder(orderId!)

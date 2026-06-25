@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { discountGroupSchema, type DiscountGroupInput } from '@/lib/validators'
 import { requireDeleteAccess, requireWriteAccess } from '@/lib/auth/permissions'
@@ -58,6 +59,8 @@ export async function softDeleteDiscountGroup(id: string) {
     .eq('id', id)
   
   if (error) return { error: error.message }
+  revalidatePath('/discount-groups')
+  revalidatePath('/archive')
   return { success: true }
 }
 
@@ -72,5 +75,32 @@ export async function bulkArchiveDiscountGroups(ids: string[]) {
     .in('id', ids)
   
   if (error) return { error: error.message }
+  revalidatePath('/discount-groups')
+  revalidatePath('/archive')
   return { success: true }
+}
+
+export async function restoreDiscountGroup(id: string) {
+  const auth = await requireDeleteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const { data: group } = await supabase
+    .from('discount_groups')
+    .select('id')
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!group) return { error: 'Archived discount group not found' }
+
+  const { error } = await supabase
+    .from('discount_groups')
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+  revalidatePath('/discount-groups')
+  revalidatePath('/archive')
+  return {}
 }

@@ -18,6 +18,10 @@ export const platformMeta = {
     'Archived Sales',
     'Restore archived sales or permanently delete them when allowed.',
   ),
+  archive: pageMetadata(
+    'Archive',
+    'Restore archived sales, products, customers, categories, and content.',
+  ),
   newSale: pageMetadata(
     'New Sale',
     'Create a new manual sale for a customer.',

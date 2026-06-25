@@ -76,6 +76,34 @@ export async function deleteNewsPost(id: string): Promise<ApiResponse> {
 
   revalidateStorefrontNews(post?.slug)
   revalidatePath('/news')
+  revalidatePath('/archive')
+  return {}
+}
+
+export async function restoreNewsPost(id: string): Promise<ApiResponse> {
+  const auth = await requireDeleteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+  const { data: post } = await supabase
+    .from('news_posts')
+    .select('slug')
+    .eq('id', id)
+    .not('deleted_at', 'is', null)
+    .single()
+
+  if (!post) return { error: 'Archived news post not found' }
+
+  const { error } = await supabase
+    .from('news_posts')
+    .update({ deleted_at: null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) return { error: error.message }
+
+  revalidateStorefrontNews(post.slug)
+  revalidatePath('/news')
+  revalidatePath('/archive')
   return {}
 }
 
