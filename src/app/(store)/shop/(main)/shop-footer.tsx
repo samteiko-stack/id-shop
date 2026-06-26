@@ -186,6 +186,12 @@ export function ShopFooter({ categoryGroups = [] }: ShopFooterProps) {
             © {year} Infinity Dental Shop. Alla rättigheter reserverade.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <Link
+              href="/login"
+              className="text-xs text-white/55 hover:text-white transition-colors"
+            >
+              Personalinloggning
+            </Link>
             <a
               href={`mailto:${COMPANY.email}`}
               className="text-xs text-white/55 hover:text-white transition-colors"
