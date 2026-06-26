@@ -79,7 +79,7 @@ export default async function OrdersPage({
   }>()
 
   for (const [orderId, invoices] of invoicesByOrder.entries()) {
-    const inv = invoices[0]
+    const inv = invoices.find((invoice) => invoice.status !== 'cancelled') ?? invoices[0]
     if (!inv) continue
     const paidAmount = (inv.payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0)
     const creditTotal = creditsByInvoice[inv.id] ?? 0

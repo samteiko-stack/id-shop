@@ -12,7 +12,43 @@ import { requireAdminAccess, requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { getOrderArchiveBlockers } from '@/lib/platform/archive-guards'
 import { parseDefaultTaxRate } from '@/lib/tax'
+import { invalidateInvoicePdf } from '@/lib/pdf/serve-invoice-pdf'
 import type { OrderStatus } from '@/types'
+
+async function reactivateCancelledInvoice(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  invoiceId: string,
+  invoiceNumber: string,
+) {
+  const [{ count: paymentCount }, { count: creditCount }] = await Promise.all([
+    supabase.from('payments').select('id', { count: 'exact', head: true }).eq('invoice_id', invoiceId),
+    supabase
+      .from('credit_invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('invoice_id', invoiceId)
+      .is('deleted_at', null),
+  ])
+
+  if ((paymentCount ?? 0) > 0) {
+    return { error: `Cannot reactivate invoice ${invoiceNumber}: payments are recorded` }
+  }
+  if ((creditCount ?? 0) > 0) {
+    return { error: `Cannot reactivate invoice ${invoiceNumber}: credit notes exist` }
+  }
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({
+      status: 'issued',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', invoiceId)
+
+  if (error) return { error: error.message }
+
+  await invalidateInvoicePdf(supabase, invoiceId)
+  return {}
+}
 
 export async function createOrder(input: OrderInput) {
   const auth = await requireWriteAccess()
@@ -229,12 +265,31 @@ export async function createInvoiceFromOrder(orderId: string) {
 
   const { data: existing } = await supabase
     .from('invoices')
-    .select('id, invoice_number')
+    .select('id, invoice_number, status')
     .eq('order_id', orderId)
     .is('deleted_at', null)
     .maybeSingle()
 
   if (existing) {
+    if (existing.status === 'cancelled') {
+      const reactivated = await reactivateCancelledInvoice(supabase, existing.id, existing.invoice_number)
+      if (reactivated.error) return { error: reactivated.error }
+
+      revalidatePath(`/orders/${orderId}`)
+      revalidatePath('/orders')
+      revalidatePath('/invoices')
+      revalidatePath(`/invoices/${existing.id}`)
+      revalidateDashboard()
+
+      return {
+        data: {
+          invoiceId: existing.id,
+          invoiceNumber: existing.invoice_number,
+          reactivated: true,
+        },
+      }
+    }
+
     return { data: { invoiceId: existing.id, invoiceNumber: existing.invoice_number, alreadyExists: true } }
   }
 
@@ -263,6 +318,30 @@ export async function createInvoiceFromOrder(orderId: string) {
   })
 
   if (linked.length > 0) {
+    const linkedInvoice = linked[0]
+    if (linkedInvoice.status === 'cancelled') {
+      const reactivated = await reactivateCancelledInvoice(
+        supabase,
+        linkedInvoice.id,
+        linkedInvoice.invoice_number,
+      )
+      if (reactivated.error) return { error: reactivated.error }
+
+      revalidatePath(`/orders/${orderId}`)
+      revalidatePath('/orders')
+      revalidatePath('/invoices')
+      revalidatePath(`/invoices/${linkedInvoice.id}`)
+      revalidateDashboard()
+
+      return {
+        data: {
+          invoiceId: linkedInvoice.id,
+          invoiceNumber: linkedInvoice.invoice_number,
+          reactivated: true,
+        },
+      }
+    }
+
     return {
       data: {
         invoiceId: linked[0].id,

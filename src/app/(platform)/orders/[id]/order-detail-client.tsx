@@ -107,7 +107,11 @@ export function OrderDetailClient({
           if (result.error) { toast.error(result.error); return }
           const invoiceNumber = (result.data as any)?.invoice?.invoiceNumber
           if (status === 'fulfilled' && invoiceNumber) {
-            toast.success(`Sale fulfilled · Invoice ${invoiceNumber} created`)
+            if ((result.data as any)?.invoice?.reactivated) {
+              toast.success(`Sale fulfilled · Invoice ${invoiceNumber} reactivated`)
+            } else {
+              toast.success(`Sale fulfilled · Invoice ${invoiceNumber} created`)
+            }
           } else {
             toast.success(`Order ${status}`)
           }
@@ -161,6 +165,8 @@ export function OrderDetailClient({
         toast.success(`Invoice ${result.data?.invoiceNumber} linked to this sale`)
       } else if (result.data?.alreadyExists) {
         toast.success(`Invoice ${result.data?.invoiceNumber} already exists`)
+      } else if ((result.data as any)?.reactivated) {
+        toast.success(`Invoice ${result.data?.invoiceNumber} reactivated`)
       } else {
         toast.success(`Invoice ${result.data?.invoiceNumber} created`)
       }
