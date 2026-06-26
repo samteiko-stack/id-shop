@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createPlatformReadClient } from '@/lib/supabase/platform-client'
 import { platformMeta } from '@/lib/metadata'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { resolveOrderInvoices } from '@/lib/order-invoices'
@@ -8,8 +8,10 @@ import { OrderDetailClient } from './order-detail-client'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: order } = await supabase
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) return platformMeta.sales
+
+  const { data: order } = await platform.supabase
     .from('orders')
     .select('order_number, customer:customers(name)')
     .eq('id', id)
@@ -23,7 +25,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) redirect('/login')
+  const supabase = platform.supabase
 
   const { data: order } = await supabase
     .from('orders')

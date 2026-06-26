@@ -2,6 +2,7 @@ import { shopMeta } from '@/lib/metadata'
 import { computeOrderTotals } from '@/lib/discounts'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { requireStorefrontCustomerOrRedirect } from '@/lib/storefront/customer-session'
+import { listCustomerOrders } from '@/lib/storefront/customer-orders'
 import type { AccountCustomer, AccountInvoiceRow, AccountOrderRow } from '@/lib/storefront/account-types'
 import { AccountClient } from './account-client'
 
@@ -42,17 +43,7 @@ export default async function CustomerAccountPage({
       .select('*, discount_group:discount_groups(name, discount_rate)')
       .eq('id', customer.id)
       .single(),
-    supabase
-      .from('orders')
-      .select(`
-        id, order_number, status, created_at,
-        discount_rate, discount_amount, extra_discount_rate, extra_discount_amount,
-        order_items(quantity, unit_price)
-      `)
-      .eq('customer_id', customer.id)
-      .is('deleted_at', null)
-      .neq('status', 'draft')
-      .order('created_at', { ascending: false }),
+    listCustomerOrders(customer.id),
     supabase
       .from('invoices')
       .select('id, invoice_number, status, total, currency, issue_date, due_date, payments(amount)')

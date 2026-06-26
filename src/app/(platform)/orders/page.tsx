@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { createPlatformReadClient } from '@/lib/supabase/platform-client'
 import { OrdersClient } from './orders-client'
 import { computeInvoiceSettlement } from '@/lib/invoice-settlement'
 import { resolveInvoicesForOrders } from '@/lib/order-invoices'
@@ -26,7 +27,9 @@ export default async function OrdersPage({
   const from = (page - 1) * pageSize
   const to   = from + pageSize - 1
 
-  const supabase = await createClient()
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) redirect('/login')
+  const supabase = platform.supabase
   const [ordersResult, customers, unreadOrderIds] = await Promise.all([
     supabase
       .from('orders')

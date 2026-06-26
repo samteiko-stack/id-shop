@@ -1,19 +1,21 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { computeOrderTotals } from '@/lib/discounts'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { shopMeta } from '@/lib/metadata'
 import { requireStorefrontCustomerOrRedirect } from '@/lib/storefront/customer-session'
+import { getCustomerOrder } from '@/lib/storefront/customer-orders'
 import { CustomerOrderDetailClient } from './customer-order-detail-client'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: order } = await supabase
+  const admin = await createAdminClient()
+  const { data: order } = await admin
     .from('orders')
     .select('order_number')
     .eq('id', id)
     .is('deleted_at', null)
+    .neq('status', 'draft')
     .maybeSingle()
 
   if (!order) return shopMeta.account
@@ -28,28 +30,14 @@ export default async function CustomerOrderDetailPage({
   const session = await requireStorefrontCustomerOrRedirect('/shop/konto?tab=bestallningar')
 
   const { id } = await params
-  const { supabase, customer } = session
+  const { customer } = session
 
-  const { data: rawOrder } = await supabase
-    .from('orders')
-    .select(`
-      id, order_number, status, created_at, notes,
-      discount_rate, discount_amount, extra_discount_rate, extra_discount_amount,
-      order_items(
-        id, quantity, unit_price,
-        products(name, ref, image_url)
-      )
-    `)
-    .eq('id', id)
-    .eq('customer_id', customer.id)
-    .is('deleted_at', null)
-    .neq('status', 'draft')
-    .single()
+  const { data: rawOrder } = await getCustomerOrder(customer.id, id)
 
   if (!rawOrder) notFound()
 
   const items = (rawOrder.order_items ?? []).map((item: Record<string, unknown>) => {
-    const productRaw = item.products
+    const productRaw = item.product
     const product = Array.isArray(productRaw) ? productRaw[0] ?? null : productRaw
     return {
       id: item.id as string,

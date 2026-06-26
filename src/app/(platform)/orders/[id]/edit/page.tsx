@@ -1,13 +1,15 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createPlatformReadClient } from '@/lib/supabase/platform-client'
 import { platformMeta } from '@/lib/metadata'
 import { EditOrderClient } from './edit-order-client'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: order } = await supabase
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) return platformMeta.sales
+
+  const { data: order } = await platform.supabase
     .from('orders')
     .select('order_number')
     .eq('id', id)
@@ -20,7 +22,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function EditOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) redirect('/login')
+  const supabase = platform.supabase
 
   const [{ data: order }, { data: customers }, { data: products }] = await Promise.all([
     supabase

@@ -75,7 +75,7 @@ export function CartClient({
       if (result.error) {
         toast.error(result.error)
       } else {
-        setSubmittedOrderNumber(draftOrder?.order_number ?? '')
+        setSubmittedOrderNumber(result.orderNumber ?? draftOrder?.order_number ?? '')
         setSubmitted(true)
       }
     })
@@ -93,7 +93,10 @@ export function CartClient({
           <div className="text-center py-20">
             <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" aria-hidden />
             <p className="text-muted-foreground mb-8">Vårt team återkommer till dig inom kort.</p>
-            <ButtonLink href="/shop">Fortsätt handla</ButtonLink>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <ButtonLink href="/shop/konto?tab=bestallningar">Visa mina beställningar</ButtonLink>
+              <ButtonLink href="/shop" variant="outline">Fortsätt handla</ButtonLink>
+            </div>
           </div>
         </StorefrontContainer>
       </div>

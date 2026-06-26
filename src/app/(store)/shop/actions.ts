@@ -372,14 +372,26 @@ export async function submitCart() {
     .eq('id', draftOrder.id)
     .eq('customer_id', customer.id)
     .eq('status', 'draft')
-    .select('id, order_number, customers(name)')
+    .select('id, order_number, customer:customers(name)')
     .maybeSingle()
 
   if (error) return { error: error.message }
   if (!confirmed) return { error: 'Order could not be confirmed. Please try again.' }
 
-  const customerName = (confirmed.customers as { name?: string } | null)?.name ?? 'Unknown customer'
-  const orderNumber = confirmed.order_number ?? ''
+  const { data: verified } = await admin
+    .from('orders')
+    .select('id, status, order_number')
+    .eq('id', draftOrder.id)
+    .eq('customer_id', customer.id)
+    .maybeSingle()
+
+  if (!verified || verified.status !== 'confirmed') {
+    console.error('[submitCart] order missing or not confirmed after update', verified)
+    return { error: 'Order could not be confirmed. Please try again.' }
+  }
+
+  const customerName = (confirmed.customer as { name?: string } | null)?.name ?? 'Unknown customer'
+  const orderNumber = verified.order_number ?? confirmed.order_number ?? ''
 
   await createNotification({
     type: 'new_order',
@@ -390,9 +402,10 @@ export async function submitCart() {
 
   revalidatePath('/shop/cart')
   revalidatePath('/shop')
+  revalidatePath('/shop/konto')
   revalidatePath('/orders')
   revalidateDashboard()
-  return { success: true, orderId: draftOrder.id }
+  return { success: true, orderId: draftOrder.id, orderNumber }
 }
 
 export async function reorderOrder(orderId: string) {

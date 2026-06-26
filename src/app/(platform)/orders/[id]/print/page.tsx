@@ -1,6 +1,6 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createPlatformReadClient } from '@/lib/supabase/platform-client'
 import { platformMeta } from '@/lib/metadata'
 import { salePrintTitle } from '@/lib/sale-print'
 import { getOrderForPrint } from '@/lib/orders/print-data'
@@ -13,8 +13,10 @@ import { PrintDocumentTitle } from '../../print/print-document-title'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const supabase = await createClient()
-  const { data: order } = await supabase
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) return platformMeta.printSale('Sale')
+
+  const { data: order } = await platform.supabase
     .from('orders')
     .select('order_number, customer:customers(name)')
     .eq('id', id)
@@ -31,8 +33,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function OrderPrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const data = await getOrderForPrint(supabase, id)
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) redirect('/login')
+
+  const data = await getOrderForPrint(platform.supabase, id)
   if (!data) notFound()
 
   const documentTitle = salePrintTitle(data.order.order_number, data.order.customer?.name)

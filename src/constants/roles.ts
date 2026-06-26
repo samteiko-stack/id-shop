@@ -28,3 +28,6 @@ export const DELETE_ROLES: UserRole[] = ['admin']
 
 /* Roles that can access admin-only sections */
 export const ADMIN_ONLY_ROLES: UserRole[] = ['admin']
+
+/* Roles that can access the internal platform (not storefront customers) */
+export const PLATFORM_ROLES: UserRole[] = ['admin', 'staff', 'read_only']

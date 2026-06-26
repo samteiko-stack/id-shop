@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentUserRole } from '@/lib/auth/permissions'
-import type { UserRole } from '@/types'
-
-const PLATFORM_ROLES: UserRole[] = ['admin', 'staff', 'read_only']
+import { PLATFORM_ROLES } from '@/constants/roles'
 
 export async function GET() {
   const auth = await getCurrentUserRole()
