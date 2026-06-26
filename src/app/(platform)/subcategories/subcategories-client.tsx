@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { ImageUpload } from '@/components/ui/image-upload'
 import { slugify } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Loader2, ChevronDown } from '@/components/icons'
 import { createCategory, updateCategory, softDeleteCategory } from '../categories/actions'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'

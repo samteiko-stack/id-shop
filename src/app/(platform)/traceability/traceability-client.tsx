@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatDate, formatDateTime } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Search, QrCode, Package, User, AlertTriangle, CheckCircle2, ChevronRight, Pencil, Trash2 } from '@/components/icons'
 import { Alert, AlertIcon } from '@/components/ui/alert'
 import Link from 'next/link'

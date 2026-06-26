@@ -17,7 +17,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Loader2, Eye, CheckCircle, XCircle } from '@/components/icons'
 import Link from 'next/link'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'

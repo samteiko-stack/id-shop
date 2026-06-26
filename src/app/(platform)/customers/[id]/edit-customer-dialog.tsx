@@ -11,7 +11,7 @@ import { FilterSelect } from '@/components/ui/filter-select'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Pencil, Loader2 } from '@/components/icons'
 import { updateCustomer } from '../actions'
 import type { CustomerInput } from '@/lib/validators'

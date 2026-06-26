@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { addPayment, deletePayment } from './payment-actions'
 import type { Payment, PaymentMethod, PaymentStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'

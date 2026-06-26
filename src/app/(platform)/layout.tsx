@@ -46,7 +46,7 @@ export default async function PlatformLayout({
             <PageTransition>{children}</PageTransition>
           </main>
         </div>
-        <Toaster position="bottom-right" richColors />
+        <Toaster position="bottom-right" richColors closeButton />
       </div>
     </RoleProvider>
   )

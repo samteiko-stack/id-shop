@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { slugify } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Loader2, ChevronDown } from '@/components/icons'
 import { createCategory, updateCategory, softDeleteCategory } from './actions'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'

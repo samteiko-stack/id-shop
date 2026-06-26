@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { FilterSelect } from '@/components/ui/filter-select'
 import { getInitials, formatDateTime } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { UserPlus, MoreHorizontal, ShieldCheck, UserX, UserCheck, Loader2, AlertCircle, Search } from '@/components/icons'
 import { inviteUser, revokeInvite, updateUserRole, toggleUserActive } from './actions'
 import { ConfirmDialog, type ConfirmVariant } from '@/components/ui/confirm-dialog'

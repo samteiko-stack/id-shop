@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import Link from 'next/link'
 
 import { ArrowLeft, FileText, QrCode, CheckCircle2, XCircle, Loader2, Copy, MoreVertical, Printer, Pencil, FileMinus, Archive } from '@/components/icons'

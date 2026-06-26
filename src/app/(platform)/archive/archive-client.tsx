@@ -15,7 +15,7 @@ import { PageContainer } from '@/components/layout/page-container'
 import { createDeleteAction } from '@/lib/bulk-actions'
 import { formatDateTime } from '@/lib/utils'
 import { useRole } from '@/hooks/use-role'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { Search, RotateCcw, Trash2, MoreHorizontal } from '@/components/icons'
 import {

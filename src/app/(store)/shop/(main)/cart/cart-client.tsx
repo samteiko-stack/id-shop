@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { updateCartItem, submitCart } from '../../actions'
 import { StorefrontContainer } from '@/components/layout/storefront-container'
 import { StorefrontPageHero } from '@/components/storefront/storefront-page-hero'

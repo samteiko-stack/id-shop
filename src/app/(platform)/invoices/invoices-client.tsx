@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Combobox } from '@/components/ui/combobox'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Search, FileText, Send, Loader2, Trash2, MoreHorizontal, Eye, Download, FileMinus } from '@/components/icons'
 import { ConfirmDialog, type ConfirmVariant } from '@/components/ui/confirm-dialog'
 import Link from 'next/link'

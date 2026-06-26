@@ -22,7 +22,7 @@ import { createNewsPost, updateNewsPost, deleteNewsPost, unpublishNewsPost } fro
 import { formatDate, slugify } from '@/lib/utils'
 import { isRichTextEmpty, toEditorHtml } from '@/lib/rich-text'
 import { useRole } from '@/hooks/use-role'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 interface Props {
   initialPosts: NewsPost[]

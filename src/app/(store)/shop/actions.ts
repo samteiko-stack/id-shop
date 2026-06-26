@@ -7,6 +7,11 @@ import { createNotification } from '@/lib/notifications'
 import { requireAdminAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { computeOrderTotals } from '@/lib/discounts'
+import { toUserError } from '@/lib/user-error-message'
+
+function storefrontError(error: unknown, fallback?: string) {
+  return { error: toUserError(error, fallback, 'storefront') }
+}
 
 // ── Registration ──────────────────────────────────────────────────────────────
 
@@ -53,7 +58,7 @@ export async function registerCustomer(formData: FormData) {
     if (authError.message.includes('already registered')) {
       return { error: 'Det finns redan ett konto med den e-postadressen.' }
     }
-    return { error: authError.message }
+    return storefrontError(authError)
   }
 
   // Create customer record linked to auth user (not approved yet)
@@ -212,7 +217,7 @@ async function getOrCreateDraftOrder(
     .select('id')
     .single()
 
-  if (error) return { orderId: null, error: error.message }
+  if (error) return { orderId: null, error: toUserError(error, undefined, 'storefront') }
   return { orderId: newOrder.id, error: null }
 }
 
@@ -255,7 +260,7 @@ export async function addToCart(productId: string, quantity: number) {
     .eq('product_id', productId)
     .maybeSingle()
 
-  if (existingError) return { error: existingError.message }
+  if (existingError) return storefrontError(existingError)
 
   if (existing) {
     const { error: updateError } = await supabase
@@ -263,7 +268,7 @@ export async function addToCart(productId: string, quantity: number) {
       .update({ quantity: existing.quantity + qty })
       .eq('id', existing.id)
 
-    if (updateError) return { error: updateError.message }
+    if (updateError) return storefrontError(updateError)
   } else {
     const { error: insertError } = await supabase
       .from('order_items')
@@ -284,16 +289,16 @@ export async function addToCart(productId: string, quantity: number) {
           .eq('product_id', productId)
           .maybeSingle()
 
-        if (!raced) return { error: insertError.message }
+        if (!raced) return storefrontError(insertError)
 
         const { error: mergeError } = await supabase
           .from('order_items')
           .update({ quantity: raced.quantity + qty })
           .eq('id', raced.id)
 
-        if (mergeError) return { error: mergeError.message }
+        if (mergeError) return storefrontError(mergeError)
       } else {
-        return { error: insertError.message }
+        return storefrontError(insertError)
       }
     }
   }
@@ -319,10 +324,10 @@ export async function updateCartItem(orderItemId: string, quantity: number) {
 
   if (quantity <= 0) {
     const { error } = await supabase.from('order_items').delete().eq('id', orderItemId)
-    if (error) return { error: error.message }
+    if (error) return storefrontError(error)
   } else {
     const { error } = await supabase.from('order_items').update({ quantity }).eq('id', orderItemId)
-    if (error) return { error: error.message }
+    if (error) return storefrontError(error)
   }
 
   if (item?.order_id) {
@@ -377,7 +382,7 @@ export async function submitCart() {
     .select('id, order_number, customer:customers(name)')
     .maybeSingle()
 
-  if (error) return { error: error.message }
+  if (error) return storefrontError(error)
   if (!confirmed) return { error: 'Order could not be confirmed. Please try again.' }
 
   const { data: verified } = await admin
@@ -484,7 +489,7 @@ export async function reorderOrder(orderId: string) {
   const { error: itemsError } = await supabase.from('order_items').insert(
     lineItems.map((item) => ({ ...item, order_id: draftOrderId })),
   )
-  if (itemsError) return { error: itemsError.message }
+  if (itemsError) return storefrontError(itemsError)
 
   const discountRate = await getCustomerDiscountRate(supabase, customer.id)
   await syncDraftOrderDiscount(supabase, draftOrderId, discountRate)
@@ -511,7 +516,7 @@ export async function approveCustomer(customerId: string) {
     .from('customers')
     .update({ is_approved: true })
     .eq('id', customerId)
-  if (error) return { error: error.message }
+  if (error) return storefrontError(error)
   revalidatePath('/customers')
   revalidateDashboard()
   return { success: true }

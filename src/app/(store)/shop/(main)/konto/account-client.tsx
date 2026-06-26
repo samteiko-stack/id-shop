@@ -23,7 +23,7 @@ import type { AccountCustomer, AccountInvoiceRow, AccountOrderRow } from '@/lib/
 import type { CustomerProfileInput } from '@/lib/validators'
 import { updateCustomerProfile } from './actions'
 import { ReorderOrderButton } from '@/components/shop/reorder-order-button'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 function InfoRow({
   icon: Icon,

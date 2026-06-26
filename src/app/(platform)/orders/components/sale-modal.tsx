@@ -28,7 +28,7 @@ import {
   ScanLine,
   Search,
 } from '@/components/icons'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import type { Order, Customer, Product, OrderStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'
 import { updateOrder, archiveOrder, getOrderArchiveHints } from '../actions'

@@ -141,20 +141,6 @@ export function ShopHeader({ customer, showAdminLink = false, cartCount, topCate
                 )}
               </Link>
 
-              {/* Om oss */}
-              <Link
-                href="/shop/om-oss"
-                className={cn(
-                  'px-4 py-2 text-sm font-medium transition-colors relative',
-                  pathname.startsWith('/shop/om-oss') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                Om oss
-                {pathname.startsWith('/shop/om-oss') && (
-                  <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary" />
-                )}
-              </Link>
-
               {/* Nyheter */}
               <Link
                 href="/shop/nyheter"
@@ -165,6 +151,20 @@ export function ShopHeader({ customer, showAdminLink = false, cartCount, topCate
               >
                 Nyheter
                 {pathname.startsWith('/shop/nyheter') && (
+                  <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary" />
+                )}
+              </Link>
+
+              {/* Om oss */}
+              <Link
+                href="/shop/om-oss"
+                className={cn(
+                  'px-4 py-2 text-sm font-medium transition-colors relative',
+                  pathname.startsWith('/shop/om-oss') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Om oss
+                {pathname.startsWith('/shop/om-oss') && (
                   <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-primary" />
                 )}
               </Link>
@@ -273,8 +273,8 @@ export function ShopHeader({ customer, showAdminLink = false, cartCount, topCate
               </Link>
             ))}
             <Link href="/shop/programs" onClick={() => setMobileOpen(false)} className={cn('block px-3 py-2.5 rounded-lg text-sm font-medium', pathname.startsWith('/shop/programs') ? 'text-primary' : 'text-foreground hover:bg-muted')}>Program</Link>
-            <Link href="/shop/om-oss" onClick={() => setMobileOpen(false)} className={cn('block px-3 py-2.5 rounded-lg text-sm font-medium', pathname.startsWith('/shop/om-oss') ? 'text-primary' : 'text-foreground hover:bg-muted')}>Om oss</Link>
             <Link href="/shop/nyheter" onClick={() => setMobileOpen(false)} className={cn('block px-3 py-2.5 rounded-lg text-sm font-medium', pathname.startsWith('/shop/nyheter') ? 'text-primary' : 'text-foreground hover:bg-muted')}>Nyheter</Link>
+            <Link href="/shop/om-oss" onClick={() => setMobileOpen(false)} className={cn('block px-3 py-2.5 rounded-lg text-sm font-medium', pathname.startsWith('/shop/om-oss') ? 'text-primary' : 'text-foreground hover:bg-muted')}>Om oss</Link>
 
             {!customer && (
               <Link href="/shop/register" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted">

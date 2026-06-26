@@ -13,7 +13,7 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { Plus, Search } from '@/components/icons'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'
 import { createExportAction } from '@/lib/bulk-actions'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const columns = [
   {

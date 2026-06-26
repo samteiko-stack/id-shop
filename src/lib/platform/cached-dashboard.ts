@@ -55,7 +55,7 @@ async function fetchDashboardData() {
     lastMonthOrdersResult,
   ] = await Promise.allSettled([
     supabase.from('orders').select('id, status, created_at, source').is('deleted_at', null).neq('status', 'draft'),
-    supabase.from('invoices').select('id, total, status, created_at, payments(amount)').is('deleted_at', null),
+    supabase.from('invoices').select('id, total, tax_amount, subtotal, status, created_at, issue_date, payments(amount)').is('deleted_at', null),
     supabase.from('credit_invoices').select('invoice_id, total'),
     supabase.from('customers').select('id, created_at').is('deleted_at', null).eq('is_approved', true),
     supabase
@@ -157,10 +157,10 @@ async function fetchDashboardData() {
   const bestSellersThisMonth = aggregateBestSellers(thisMonthItems as Parameters<typeof aggregateBestSellers>[0])
   const bestSellersLastMonth = aggregateBestSellers(lastMonthItems as Parameters<typeof aggregateBestSellers>[0])
 
-  const monthlyMap = new Map<string, { orders: number; revenue: number }>()
+  const monthlyMap = new Map<string, { orders: number; revenue: number; sales: number; tax: number }>()
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    monthlyMap.set(monthLabel(d.getFullYear(), d.getMonth()), { orders: 0, revenue: 0 })
+    monthlyMap.set(monthLabel(d.getFullYear(), d.getMonth()), { orders: 0, revenue: 0, sales: 0, tax: 0 })
   }
 
   for (const o of orders) {
@@ -170,9 +170,16 @@ async function fetchDashboardData() {
   }
   for (const inv of invoices) {
     if (inv.status !== 'paid') continue
-    const d = new Date(inv.created_at)
+    const dateStr = inv.issue_date ?? inv.created_at
+    const d = new Date(dateStr)
     const key = monthLabel(d.getFullYear(), d.getMonth())
-    if (monthlyMap.has(key)) monthlyMap.get(key)!.revenue += inv.total ?? 0
+    if (!monthlyMap.has(key)) continue
+    const total = Number(inv.total ?? 0)
+    const tax = Number(inv.tax_amount ?? 0)
+    const bucket = monthlyMap.get(key)!
+    bucket.revenue += total
+    bucket.tax += tax
+    bucket.sales += Math.max(0, total - tax)
   }
 
   const monthlyChartData = Array.from(monthlyMap.entries()).map(([month, v]) => ({

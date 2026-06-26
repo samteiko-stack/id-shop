@@ -11,7 +11,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select'
 import { ProductSelect } from '@/components/products/product-select'
 import { formatCurrency } from '@/lib/utils'
 import { computeOrderTotals } from '@/lib/discounts'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Plus, Trash2, ArrowLeft, Loader2 } from '@/components/icons'
 import { updateOrder } from '../../actions'
 

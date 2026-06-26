@@ -3,7 +3,7 @@
 import { createNotification, markOrderNotificationsRead } from '@/lib/notifications'
 import { getCurrentUserRole } from '@/lib/auth/permissions'
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { orderSchema, type OrderInput } from '@/lib/validators'
 import { writeAuditLog } from '@/lib/audit'
 import { resolveOrderInvoices, computeExpectedInvoiceTotal } from '@/lib/order-invoices'
@@ -13,7 +13,12 @@ import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { getOrderArchiveBlockers } from '@/lib/platform/archive-guards'
 import { parseDefaultTaxRate } from '@/lib/tax'
 import { invalidateInvoicePdf } from '@/lib/pdf/serve-invoice-pdf'
+import { mergeOrderLineItems, toUserError } from '@/lib/user-error-message'
 import type { OrderStatus } from '@/types'
+
+function actionError(error: unknown, fallback?: string) {
+  return { error: toUserError(error, fallback) }
+}
 
 async function reactivateCancelledInvoice(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -44,7 +49,7 @@ async function reactivateCancelledInvoice(
     })
     .eq('id', invoiceId)
 
-  if (error) return { error: error.message }
+  if (error) return actionError(error)
 
   await invalidateInvoicePdf(supabase, invoiceId)
   return {}
@@ -65,6 +70,7 @@ export async function createOrder(input: OrderInput) {
   }
 
   const supabase = await createClient()
+  const mergedItems = mergeOrderLineItems(parsed.data.items)
 
   // Get customer's discount group
   const { data: customer } = await supabase
@@ -76,7 +82,7 @@ export async function createOrder(input: OrderInput) {
   const groupRate = Number((customer?.discount_group as { discount_rate?: number } | null)?.discount_rate ?? 0)
   const extraDiscountRate = parsed.data.extra_discount_rate ?? 0
   const totals = computeOrderTotals({
-    items: parsed.data.items,
+    items: mergedItems,
     discount_rate: groupRate,
     extra_discount_rate: extraDiscountRate,
   })
@@ -84,9 +90,9 @@ export async function createOrder(input: OrderInput) {
   // Generate order number
   const { data: orderNumber, error: seqError } = await supabase
     .rpc('next_sequence_number', { p_type: 'order', p_prefix: 'ORD' })
-  if (seqError) return { error: seqError.message }
+  if (seqError) return actionError(seqError)
 
-  const { items, extra_discount_rate: _edr, ...orderData } = parsed.data
+  const { items: _items, extra_discount_rate: _edr, ...orderData } = parsed.data
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
@@ -102,15 +108,15 @@ export async function createOrder(input: OrderInput) {
     .select()
     .single()
 
-  if (orderError) return { error: orderError.message }
+  if (orderError) return actionError(orderError)
 
   const { error: itemsError } = await supabase.from('order_items').insert(
-    items.map((item) => ({ ...item, order_id: order.id }))
+    mergedItems.map((item) => ({ ...item, order_id: order.id }))
   )
 
   if (itemsError) {
     await supabase.from('orders').update({ deleted_at: new Date().toISOString() }).eq('id', order.id)
-    return { error: itemsError.message }
+    return actionError(itemsError)
   }
 
   const { data: customerRecord } = await supabase
@@ -144,13 +150,13 @@ export async function duplicateOrder(orderId: string) {
     .single()
 
   if (fetchError || !originalOrder) {
-    return { error: fetchError?.message ?? 'Order not found' }
+    return { error: toUserError(fetchError, 'Order not found.') }
   }
 
   // Generate new order number
   const { data: orderNumber, error: seqError } = await supabase
     .rpc('next_sequence_number', { p_type: 'order', p_prefix: 'ORD' })
-  if (seqError) return { error: seqError.message }
+  if (seqError) return actionError(seqError)
 
   // Create new order
   const { data: newOrder, error: orderError } = await supabase
@@ -169,21 +175,25 @@ export async function duplicateOrder(orderId: string) {
     .select()
     .single()
 
-  if (orderError) return { error: orderError.message }
+  if (orderError) return actionError(orderError)
 
   // Create order items
-  const items = (originalOrder.items as any[]).map(item => ({
+  const items = mergeOrderLineItems(
+    (originalOrder.items as any[]).map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    })),
+  ).map((item) => ({
     order_id: newOrder.id,
-    product_id: item.product_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
+    ...item,
   }))
 
   const { error: itemsError } = await supabase.from('order_items').insert(items)
 
   if (itemsError) {
     await supabase.from('orders').update({ deleted_at: new Date().toISOString() }).eq('id', newOrder.id)
-    return { error: itemsError.message }
+    return actionError(itemsError)
   }
 
   revalidateDashboard()
@@ -211,13 +221,14 @@ export async function updateOrder(
 
   const groupRate = Number((customer?.discount_group as { discount_rate?: number } | null)?.discount_rate ?? 0)
   const extraDiscountRate = input.extra_discount_rate ?? 0
+  const mergedItems = mergeOrderLineItems(input.items)
   const totals = computeOrderTotals({
-    items: input.items,
+    items: mergedItems,
     discount_rate: groupRate,
     extra_discount_rate: extraDiscountRate,
   })
 
-  const { items, extra_discount_rate: _edr, ...orderData } = input
+  const { items: _items, extra_discount_rate: _edr, ...orderData } = input
 
   const { error: orderError } = await supabase
     .from('orders')
@@ -231,18 +242,21 @@ export async function updateOrder(
     })
     .eq('id', orderId)
 
-  if (orderError) return { error: orderError.message }
+  if (orderError) return actionError(orderError)
 
-  // Delete existing items and re-insert
-  const { error: deleteError } = await supabase
+  // Service role: platform RLS has no DELETE on order_items (see migration 033).
+  // Auth is already enforced above via requireWriteAccess.
+  const admin = await createAdminClient()
+
+  const { error: deleteError } = await admin
     .from('order_items')
     .delete()
     .eq('order_id', orderId)
 
-  if (deleteError) return { error: deleteError.message }
+  if (deleteError) return actionError(deleteError)
 
-  const { error: itemsError } = await supabase.from('order_items').insert(
-    items.map((item) => ({
+  const { error: itemsError } = await admin.from('order_items').insert(
+    mergedItems.map((item) => ({
       order_id: orderId,
       product_id: item.product_id,
       quantity: item.quantity,
@@ -250,7 +264,7 @@ export async function updateOrder(
     }))
   )
 
-  if (itemsError) return { error: itemsError.message }
+  if (itemsError) return actionError(itemsError)
 
   revalidateDashboard()
   return { success: true }
@@ -374,7 +388,7 @@ export async function createInvoiceFromOrder(orderId: string) {
 
   const { data: invoiceNumber, error: seqError } = await supabase
     .rpc('next_sequence_number', { p_type: 'invoice', p_prefix: 'INV' })
-  if (seqError) return { error: seqError.message }
+  if (seqError) return actionError(seqError)
 
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
@@ -398,7 +412,7 @@ export async function createInvoiceFromOrder(orderId: string) {
     .select('id')
     .single()
 
-  if (invoiceError) return { error: invoiceError.message }
+  if (invoiceError) return actionError(invoiceError)
 
   const { error: itemsError } = await supabase.from('invoice_items').insert(
     items.map((item) => {
@@ -418,7 +432,7 @@ export async function createInvoiceFromOrder(orderId: string) {
 
   if (itemsError) {
     await supabase.from('invoices').update({ deleted_at: new Date().toISOString() }).eq('id', invoice.id)
-    return { error: itemsError.message }
+    return actionError(itemsError)
   }
 
   await writeAuditLog({
@@ -482,7 +496,7 @@ export async function revertOrderFulfillment(orderId: string) {
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', invoice.id)
 
-    if (cancelError) return { error: cancelError.message }
+    if (cancelError) return actionError(cancelError)
   }
 
   const { error } = await supabase
@@ -490,7 +504,7 @@ export async function revertOrderFulfillment(orderId: string) {
     .update({ status: 'confirmed', updated_at: new Date().toISOString() })
     .eq('id', orderId)
 
-  if (error) return { error: error.message }
+  if (error) return actionError(error)
 
   revalidatePath(`/orders/${orderId}`)
   revalidatePath('/orders')
@@ -529,7 +543,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     .from('orders')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', orderId)
-  if (error) return { error: error.message }
+  if (error) return actionError(error)
 
   if (status === 'fulfilled') {
     const invoiceResult = await createInvoiceFromOrder(orderId)
@@ -579,7 +593,7 @@ export async function archiveOrder(orderId: string) {
     .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', orderId)
 
-  if (error) return { error: error.message }
+  if (error) return actionError(error)
   revalidatePath('/archive')
   revalidatePath('/orders')
   revalidatePath('/orders/archive')
@@ -613,7 +627,7 @@ export async function restoreOrder(orderId: string) {
     .update({ deleted_at: null, updated_at: new Date().toISOString() })
     .eq('id', orderId)
 
-  if (error) return { error: error.message }
+  if (error) return actionError(error)
   revalidatePath('/archive')
   revalidatePath('/orders')
   revalidatePath('/orders/archive')
@@ -673,7 +687,7 @@ export async function permanentDeleteOrder(orderId: string) {
   }
 
   const { error } = await supabase.from('orders').delete().eq('id', orderId)
-  if (error) return { error: error.message }
+  if (error) return actionError(error)
   revalidatePath('/archive')
   revalidatePath('/orders')
   revalidatePath('/orders/archive')

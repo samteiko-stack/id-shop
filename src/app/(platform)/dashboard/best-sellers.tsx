@@ -15,33 +15,37 @@ interface Props {
   lastMonthLabel: string
 }
 
-function HorizontalBars({ data }: { data: BestSellerItem[] }) {
-  if (data.length === 0) {
-    return <p className="text-sm text-muted-foreground py-6 text-center">No sales data this period.</p>
+const TOP_N = 5
+
+function CompactList({ data }: { data: BestSellerItem[] }) {
+  const items = data.slice(0, TOP_N)
+
+  if (items.length === 0) {
+    return <p className="py-8 text-center text-sm text-muted-foreground">No sales data this period.</p>
   }
 
-  const max = data[0].qty
+  const max = items[0].qty
 
   return (
-    <div className="space-y-2.5">
-      {data.map((item, i) => (
-        <div key={i} className="flex items-center gap-3 group">
-          <span className="w-4 text-xs text-muted-foreground text-right shrink-0">{i + 1}</span>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-foreground truncate pr-2">{item.name}</span>
-              <span className="text-xs font-semibold text-foreground shrink-0">{item.qty}</span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${(item.qty / max) * 100}%`, opacity: 1 - i * 0.06 }}
-              />
-            </div>
+    <ol className="space-y-2">
+      {items.map((item, i) => (
+        <li key={`${item.ref}-${i}`} className="rounded-lg px-2 py-1.5 hover:bg-muted/40">
+          <div className="flex items-baseline gap-2">
+            <span className="w-4 shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">{i + 1}</span>
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground" title={item.name}>
+              {item.name}
+            </span>
+            <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{item.qty}</span>
           </div>
-        </div>
+          <div className="mt-1 ml-6 h-1 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary/80"
+              style={{ width: `${(item.qty / max) * 100}%`, opacity: 1 - i * 0.08 }}
+            />
+          </div>
+        </li>
       ))}
-    </div>
+    </ol>
   )
 }
 
@@ -50,21 +54,25 @@ export function BestSellers({ thisMonth, lastMonth, thisMonthLabel, lastMonthLab
 
   return (
     <div>
-      <div className="flex items-center gap-1 mb-4 bg-muted rounded-lg p-1 w-fit">
-        <button
-          onClick={() => setActive('this')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${active === 'this' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          {thisMonthLabel}
-        </button>
-        <button
-          onClick={() => setActive('last')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${active === 'last' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-        >
-          {lastMonthLabel}
-        </button>
+      <div className="mb-3 flex items-center gap-1 rounded-lg bg-muted p-0.5">
+        {([
+          ['this', thisMonthLabel],
+          ['last', lastMonthLabel],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActive(key)}
+            className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-all ${
+              active === key
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-      <HorizontalBars data={active === 'this' ? thisMonth : lastMonth} />
+      <CompactList data={active === 'this' ? thisMonth : lastMonth} />
     </div>
   )
 }
