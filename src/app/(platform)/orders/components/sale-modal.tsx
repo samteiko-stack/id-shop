@@ -33,7 +33,7 @@ import type { Order, Customer, Product, OrderStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'
 import { updateOrder, archiveOrder, getOrderArchiveHints } from '../actions'
 import { formatArchiveWarnings } from '@/lib/platform/archive-guards'
-import { formatLotNumbersFromBatches } from '@/lib/pdf/invoice-pdf-context'
+import { formatLotNumbersFromBatches } from '@/lib/trace/lot-display'
 
 interface SaleModalProps {
   open: boolean

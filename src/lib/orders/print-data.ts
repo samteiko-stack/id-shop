@@ -4,7 +4,7 @@ import { getCustomerFacingLineItems } from '@/lib/discounts'
 import {
   attachLotNumbersByOrderItemId,
   lotNumbersByOrderItemId,
-} from '@/lib/pdf/invoice-pdf-context'
+} from '@/lib/trace/lot-display'
 
 type PrintOrderLineItem = OrderLineItem & {
   id: string

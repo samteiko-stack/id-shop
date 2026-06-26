@@ -163,13 +163,11 @@ export async function correctTraceAssignment(input: {
     return { error: 'Trace assignment not found' }
   }
 
-  const oldBatch = existing.batch as {
-    id: string
-    ref: string
-    lot_number: string
-    expiry_date: string
-    raw_qr_payload?: string
-  } | null
+  const batchRaw = existing.batch as
+    | { id: string; ref: string; lot_number: string; expiry_date: string; raw_qr_payload?: string }
+    | { id: string; ref: string; lot_number: string; expiry_date: string; raw_qr_payload?: string }[]
+    | null
+  const oldBatch = Array.isArray(batchRaw) ? batchRaw[0] ?? null : batchRaw
 
   const { error: deleteError } = await supabase
     .from('order_item_batches')

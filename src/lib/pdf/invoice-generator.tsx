@@ -12,12 +12,12 @@ import type { Invoice } from '@/types'
 import { getCustomerFacingLineItems } from '@/lib/discounts'
 import type { InvoiceSettlement } from '@/lib/invoice-settlement'
 import {
-  attachLotNumbersFromOrder,
   formatLineDescription,
   paymentStatusLabel,
   SUPPLIER_LOGO,
   type InvoiceCompanySettings,
 } from '@/lib/pdf/invoice-pdf-context'
+import { attachLotNumbersFromOrder } from '@/lib/trace/lot-display'
 
 const C = {
   brand: '#0092b2',
