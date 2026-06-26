@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { StorefrontToaster } from '@/components/layout/storefront-toaster'
+import { storefrontRobots } from '@/lib/metadata'
 import { ShopFooterServer } from './shop-footer-server'
 import { ShopHeaderFallback, ShopHeaderServer } from './shop-header-server'
+
+export const metadata: Metadata = {
+  robots: storefrontRobots,
+}
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   return (

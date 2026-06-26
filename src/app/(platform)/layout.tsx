@@ -1,7 +1,9 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUserRole } from '@/lib/auth/permissions'
 import { isDevAuthBypassEnabled } from '@/lib/auth/dev-bypass'
+import { platformRobots } from '@/lib/metadata'
 import { RoleProvider } from '@/components/auth/role-provider'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
@@ -9,6 +11,10 @@ import { PageTransition } from '@/components/layout/page-transition'
 import { Toaster } from '@/components/ui/sonner'
 import { SessionTimeoutGuard } from '@/components/auth/session-timeout-guard'
 import type { UserRole } from '@/types'
+
+export const metadata: Metadata = {
+  robots: platformRobots,
+}
 
 export default async function PlatformLayout({
   children,

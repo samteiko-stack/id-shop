@@ -1,22 +1,13 @@
 import { shopMeta } from '@/lib/metadata'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { HomepageClient } from '@/app/(store)/shop/(main)/homepage-client'
-import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
+import { getStorefrontCustomerPropsWithDiscount } from '@/lib/storefront/auth-context'
 
 export const metadata = shopMeta.home
 
 export default async function HomePage() {
   const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const isLoggedIn = !!user
-  let discountRate = 0
-
-  if (user?.user_metadata?.role === 'customer') {
-    discountRate = await getCustomerDiscountRate(supabase, user.id)
-  }
+  const { isLoggedIn, discountRate } = await getStorefrontCustomerPropsWithDiscount()
 
   const { data: featuredProducts } = await supabase
     .from('products')

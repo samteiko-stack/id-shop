@@ -11,6 +11,7 @@ import { addToCart } from '../../../actions'
 import { showAddedToCartToast } from '@/lib/storefront/cart-toast'
 import { StorefrontContainer } from '@/components/layout/storefront-container'
 import { applyGeneralDiscount } from '@/lib/discounts'
+import type { StorefrontShopBanner } from '@/lib/storefront/auth-context'
 
 interface Product {
   id: string
@@ -31,9 +32,10 @@ interface Props {
   isApproved: boolean
   customerId: string | null
   discountRate?: number
+  shopBanner?: StorefrontShopBanner
 }
 
-export function ShopProductClient({ product, related, isLoggedIn, isApproved, discountRate = 0 }: Props) {
+export function ShopProductClient({ product, related, isLoggedIn, isApproved, discountRate = 0, shopBanner }: Props) {
   const displayPrice = applyGeneralDiscount(Number(product.unit_price), discountRate)
   const [qty, setQty] = useState(1)
   const [adding, startTransition] = useTransition()
@@ -155,13 +157,13 @@ export function ShopProductClient({ product, related, isLoggedIn, isApproved, di
             </div>
           )}
 
-          {isLoggedIn && !isApproved && (
+          {isLoggedIn && !isApproved && shopBanner === 'pending' && (
             <div className="mt-auto border border-border bg-muted/50 rounded-lg px-4 py-3 text-sm text-muted-foreground">
               Ditt konto väntar på godkännande. Du kan bläddra men kan inte beställa ännu.
             </div>
           )}
 
-          {!isLoggedIn && (
+          {shopBanner === 'login' && (
             <div className="mt-auto">
               <ButtonLink href="/shop/login" variant="outline" className="w-full gap-2">
                 <Lock className="h-4 w-4" />

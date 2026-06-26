@@ -1,6 +1,6 @@
-import { authMeta } from '@/lib/metadata'
+import { authMeta, withNoIndex } from '@/lib/metadata'
 
-export const metadata = authMeta.login
+export const metadata = withNoIndex(authMeta.login)
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return children

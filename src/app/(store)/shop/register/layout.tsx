@@ -1,6 +1,6 @@
-import { shopMeta } from '@/lib/metadata'
+import { shopMeta, withNoIndex } from '@/lib/metadata'
 
-export const metadata = shopMeta.register
+export const metadata = withNoIndex(shopMeta.register)
 
 export default function ShopRegisterLayout({ children }: { children: React.ReactNode }) {
   return children

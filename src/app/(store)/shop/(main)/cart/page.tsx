@@ -1,29 +1,31 @@
 import { shopMeta } from '@/lib/metadata'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { CartClient } from './cart-client'
+import { getStorefrontAuthContext } from '@/lib/storefront/auth-context'
 
 export const metadata = shopMeta.cart
 
 export default async function CartPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const auth = await getStorefrontAuthContext()
 
-  if (!user || user.user_metadata?.role !== 'customer') {
+  if (!auth) {
     redirect('/shop/login?redirectTo=/shop/cart')
   }
 
-  const { data: customer } = await supabase
-    .from('customers')
-    .select('id, name, is_approved')
-    .eq('auth_user_id', user.id)
-    .single()
+  if (auth.role !== 'customer') {
+    redirect('/dashboard')
+  }
 
-  if (!customer?.is_approved) {
+  const customer = auth.customer
+  if (!customer) {
+    redirect('/shop/login?redirectTo=/shop/cart')
+  }
+
+  if (!customer.is_approved) {
     redirect('/shop/pending')
   }
 
-  const { data: rawOrder } = await supabase
+  const { data: rawOrder } = await auth.supabase
     .from('orders')
     .select(`
       id, order_number, discount_rate, extra_discount_rate, extra_discount_amount,
@@ -37,7 +39,6 @@ export default async function CartPage() {
     .eq('source', 'storefront')
     .maybeSingle()
 
-  // Supabase returns products as array; normalize to single object
   const draftOrder = rawOrder ? {
     ...rawOrder,
     order_items: (rawOrder.order_items ?? []).map((item: any) => ({

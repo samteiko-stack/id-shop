@@ -1,243 +1,263 @@
 import type { Metadata } from 'next'
 
+const SITE_NAME = 'ID Shop'
+
 /** Standard page metadata — title is combined with root template: "%s | ID Shop" */
 export function pageMetadata(title: string, description: string): Metadata {
-  return { title, description }
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: SITE_NAME,
+      type: 'website',
+    },
+  }
 }
 
 export const platformMeta = {
   dashboard: pageMetadata(
-    'Dashboard',
-    'Overview of sales, revenue, inventory alerts, and recent platform activity.',
+    'Business Dashboard & KPIs',
+    'Overview of monthly sales, revenue, inventory alerts, low-stock products, and recent platform activity for your medical supply business.',
   ),
   sales: pageMetadata(
-    'Sales',
-    'View and manage customer sales, order status, invoices, and payment balances.',
+    'Sales & Order Management',
+    'View and manage customer sales, order status, fulfillment, linked invoices, and payment balances in one place.',
   ),
   archivedSales: pageMetadata(
     'Archived Sales',
-    'Restore archived sales or permanently delete them when allowed.',
+    'Restore archived sales or permanently delete them when allowed by traceability and payment rules.',
   ),
   archive: pageMetadata(
-    'Archive',
-    'Restore archived sales, products, customers, categories, and content.',
+    'Archive — Restore Records',
+    'Restore archived sales, products, customers, categories, discount groups, news posts, and training programs.',
   ),
   newSale: pageMetadata(
-    'New Sale',
-    'Create a new manual sale for a customer.',
+    'Create New Sale',
+    'Create a new manual sale for a B2B customer with line items, pricing, and discounts.',
   ),
   saleDetail: (orderNumber: string, customerName?: string | null) =>
     pageMetadata(
-      orderNumber,
+      customerName ? `Sale ${orderNumber} — ${customerName}` : `Sale ${orderNumber}`,
       customerName
-        ? `View sale ${orderNumber} for ${customerName} — line items, invoices, and fulfillment.`
-        : `View sale ${orderNumber} — line items, customer, invoices, and fulfillment.`,
+        ? `View sale ${orderNumber} for ${customerName} — line items, invoices, fulfillment status, and LOT traceability.`
+        : `View sale ${orderNumber} — line items, customer details, invoices, and fulfillment.`,
     ),
   editSale: (orderNumber: string) =>
     pageMetadata(
-      `Edit ${orderNumber}`,
-      `Update line items and details for sale ${orderNumber}.`,
+      `Edit Sale ${orderNumber}`,
+      `Update line items, pricing, and customer details for sale ${orderNumber}.`,
     ),
   printSale: (orderNumber: string, customerName?: string | null) =>
     pageMetadata(
-      `Print ${orderNumber}`,
+      customerName ? `Print Sale ${orderNumber} — ${customerName}` : `Print Sale ${orderNumber}`,
       customerName
-        ? `Print sale ${orderNumber} for ${customerName}.`
-        : `Print sale ${orderNumber}.`,
+        ? `Print sale ${orderNumber} for ${customerName} — order summary for internal or customer records.`
+        : `Print sale ${orderNumber} — order summary and line items.`,
     ),
   invoices: pageMetadata(
-    'Invoices',
-    'Manage issued invoices, payment status, and customer balances.',
+    'Invoices & Accounts Receivable',
+    'Manage issued invoices, record payments, track outstanding balances, and send invoices to customers.',
   ),
   invoiceDetail: (invoiceNumber: string, customerName?: string | null) =>
     pageMetadata(
-      invoiceNumber,
+      customerName ? `Invoice ${invoiceNumber} — ${customerName}` : `Invoice ${invoiceNumber}`,
       customerName
-        ? `Invoice ${invoiceNumber} for ${customerName}.`
-        : `Invoice ${invoiceNumber} details and payments.`,
+        ? `Invoice ${invoiceNumber} for ${customerName} — amounts, payment status, credits, and PDF.`
+        : `Invoice ${invoiceNumber} — line items, payment history, and settlement status.`,
     ),
   creditInvoices: pageMetadata(
-    'Credit Invoices',
-    'View and create credit notes against existing invoices.',
+    'Credit Notes & Adjustments',
+    'View and create credit notes against existing invoices for returns, corrections, and billing adjustments.',
   ),
   newCreditInvoice: pageMetadata(
-    'New Credit Invoice',
-    'Issue a credit note linked to an original invoice.',
+    'Issue Credit Note',
+    'Create a credit note linked to an original invoice with reason and line-item adjustments.',
   ),
   creditInvoiceDetail: (creditNumber: string) =>
     pageMetadata(
-      creditNumber,
-      `Credit note ${creditNumber} — reason, line items, and linked invoice.`,
+      `Credit Note ${creditNumber}`,
+      `Credit note ${creditNumber} — reason, credited line items, and linked original invoice.`,
     ),
   customers: pageMetadata(
-    'Customers',
-    'Manage customer accounts, approvals, and discount groups.',
+    'Customer Accounts & Approvals',
+    'Manage B2B customer accounts, registration approvals, contact details, and discount group assignments.',
   ),
   customerDetail: (name: string) =>
     pageMetadata(
-      name,
-      `Customer profile for ${name} — orders, invoices, and account details.`,
+      `${name} — Customer Profile`,
+      `Customer profile for ${name} — sales history, invoices, discount group, and account settings.`,
     ),
   products: pageMetadata(
-    'Products',
-    'Manage product catalog, pricing, categories, and availability.',
+    'Product Catalog & Pricing',
+    'Manage medical and dental products, pricing, categories, availability, and storefront visibility.',
   ),
   productDetail: (name: string, ref?: string | null) =>
     pageMetadata(
-      ref ? `${name} (${ref})` : name,
+      ref ? `${name} (${ref})` : `${name} — Product Details`,
       ref
-        ? `Product ${ref} — details, batches, and order history.`
-        : `Product details, batches, and order history.`,
+        ? `Product ${ref} (${name}) — pricing, inventory alerts, LOT batches, and order history.`
+        : `Product details for ${name} — pricing, batches, and order history.`,
     ),
   categories: pageMetadata(
-    'Categories',
-    'Organise the product catalog into top-level categories.',
+    'Product Categories',
+    'Organise the medical and dental product catalog into top-level categories for the storefront.',
   ),
   subcategories: pageMetadata(
-    'Sub-categories',
-    'Manage sub-categories nested under main categories.',
+    'Product Sub-categories',
+    'Manage sub-categories nested under main categories to structure the product catalog.',
   ),
   families: pageMetadata(
-    'Product Families',
-    'Group related products into families for the storefront.',
+    'Product Families & Grouping',
+    'Group related products into families for clearer navigation on the B2B storefront.',
   ),
   discountGroups: pageMetadata(
-    'Discount Groups',
-    'Configure customer discount rates and assigned accounts.',
+    'Customer Discount Groups',
+    'Configure B2B discount rates and assign customer accounts to pricing groups.',
   ),
   discountGroupDetail: (name: string) =>
     pageMetadata(
-      name,
-      `Discount group ${name} — rate, customers, and settings.`,
+      `${name} — Discount Group`,
+      `Discount group "${name}" — rate, assigned customers, and pricing settings.`,
     ),
   programs: pageMetadata(
-    'Programs',
-    'Manage training courses and educational programs.',
+    'Training Programs & Courses',
+    'Manage clinical training courses, workshops, and educational programs for the storefront.',
   ),
   news: pageMetadata(
-    'News',
-    'Publish and manage news articles for the storefront.',
+    'News & Storefront Content',
+    'Publish and manage news articles, product updates, and industry content for the public website.',
   ),
   traceability: pageMetadata(
-    'Traceability',
-    'Scan and assign product LOT numbers to sales for compliance.',
+    'LOT Traceability & QR Scanning',
+    'Scan and assign product LOT numbers to sales for regulatory traceability and batch tracking.',
   ),
   reports: pageMetadata(
-    'Reports',
-    'Sales, inventory, and expiry reports for the business.',
+    'Sales & Inventory Reports',
+    'Business reports for revenue, order volume, top products, customer spend, VAT, and batch expiry.',
   ),
   settings: pageMetadata(
-    'Settings',
-    'Company details, invoice defaults, and platform configuration.',
+    'Company & Platform Settings',
+    'Configure company details, invoice defaults, tax settings, and platform preferences.',
   ),
   users: pageMetadata(
-    'User Management',
-    'Manage admin and staff accounts, roles, and access.',
+    'Staff & User Management',
+    'Manage admin and staff accounts, roles, invitations, and platform access permissions.',
   ),
   auditLog: pageMetadata(
-    'Audit Log',
-    'Review recorded changes across the platform.',
+    'Audit Log & Change History',
+    'Review recorded changes across orders, products, customers, and other platform records.',
   ),
 } as const
 
 export const shopMeta = {
   home: pageMetadata(
-    'Hem',
-    'ID Shop – medicinska och dentala förbrukningsartiklar för kliniker i Sverige.',
+    'Medicinska & dentala förbrukningsartiklar',
+    'ID Shop levererar certifierade medicinska och dentala förbrukningsartiklar till kliniker, tandvård och sjukvård i Sverige. Beställ online som företagskund.',
   ),
   catalog: pageMetadata(
-    'Sortiment',
-    'Bläddra i ID Shops sortiment av medicinska och dentala produkter.',
+    'Produktkatalog för klinik & tandvård',
+    'Bläddra i ID Shops sortiment av medicinska och dentala produkter. Sök efter namn eller REF och beställ som godkänd företagskund.',
   ),
   categories: pageMetadata(
-    'Alla kategorier',
-    'Utforska alla produktkategorier i ID Shops sortiment.',
+    'Alla produktkategorier',
+    'Utforska alla produktkategorier i ID Shops sortiment — medicinska och dentala förbrukningsartiklar för kliniker i Sverige.',
   ),
   category: (name: string) =>
     pageMetadata(
-      name,
-      `Visa ${name} – produkter och underkategorier hos ID Shop.`,
+      `${name} — medicinska & dentala produkter`,
+      `Beställ ${name.toLowerCase()} från ID Shop. Certifierade förbrukningsartiklar för kliniker och tandvårdsteam i Sverige.`,
     ),
   product: (name: string, ref?: string | null) =>
     pageMetadata(
-      name,
+      ref ? `${name} (${ref})` : name,
       ref
-        ? `${name} (${ref}) – beställ från ID Shop.`
-        : `${name} – beställ från ID Shop.`,
+        ? `Beställ ${name} (${ref}) — medicinsk/dental förbrukningsartikel från ID Shop med snabb leverans till kliniker.`
+        : `Beställ ${name} — medicinska och dentala förbrukningsartiklar från ID Shop för kliniker i Sverige.`,
     ),
   cart: pageMetadata(
-    'Varukorg',
-    'Granska och slutför din beställning hos ID Shop.',
+    'Varukorg & beställning',
+    'Granska valda produkter, uppdatera kvantiteter och slutför din B2B-beställning hos ID Shop.',
   ),
   account: pageMetadata(
-    'Mitt konto',
-    'Hantera ditt företagskonto, beställningar och fakturor hos ID Shop.',
+    'Mitt företagskonto',
+    'Hantera ditt företagskonto hos ID Shop — se beställningar, fakturor, kontaktuppgifter och orderhistorik.',
   ),
   orderDetail: (orderNumber: string) =>
     pageMetadata(
-      orderNumber,
-      `Beställning ${orderNumber} – status och radartiklar.`,
+      `Beställning ${orderNumber}`,
+      `Beställning ${orderNumber} hos ID Shop — status, radartiklar och leveransinformation för ditt företag.`,
     ),
   invoiceDetail: (invoiceNumber: string) =>
     pageMetadata(
-      invoiceNumber,
-      `Faktura ${invoiceNumber} – belopp, status och PDF.`,
+      `Faktura ${invoiceNumber}`,
+      `Faktura ${invoiceNumber} från ID Shop — belopp, betalningsstatus och PDF för ditt företag.`,
     ),
   programs: pageMetadata(
-    'Program',
-    'Utbildningar och program från ID Shop för kliniker och tandvård.',
+    'Utbildningar & kurser för klinik',
+    'Praktiska utbildningar och program från ID Shop för tandläkare, klinikpersonal och medicinsk vård.',
   ),
   programDetail: (title: string, description?: string | null) =>
     pageMetadata(
-      title,
-      description?.slice(0, 160) ?? `Läs mer om ${title} hos ID Shop.`,
+      `${title} — utbildning`,
+      description?.slice(0, 160) ?? `Läs mer om utbildningen ${title} hos ID Shop — datum, plats och anmälan.`,
     ),
   news: pageMetadata(
-    'Nyheter',
-    'Senaste nytt från ID Shop – produktnyheter och branschuppdateringar.',
+    'Nyheter & branschuppdateringar',
+    'Senaste nytt från ID Shop — produktnyheter, branschuppdateringar och tips för kliniker och tandvård.',
   ),
   newsDetail: (title: string, excerpt?: string | null) =>
     pageMetadata(
       title,
-      excerpt?.slice(0, 160) ?? `Artikel från ID Shop: ${title}.`,
+      excerpt?.slice(0, 160) ?? `${title} — artikel från ID Shop om medicinsk och dental försörjning.`,
     ),
   about: pageMetadata(
-    'Om oss',
-    'Lär känna ID Shop – din partner för medicinska och dentala förbrukningsartiklar i Sverige.',
+    'Om ID Shop — medicinsk försörjning',
+    'Lär känna ID Shop — din partner för certifierade medicinska och dentala förbrukningsartiklar till kliniker i Sverige.',
   ),
   login: pageMetadata(
-    'Logga in',
-    'Logga in på ditt ID Shop-konto för att se priser och beställa.',
+    'Logga in som företagskund',
+    'Logga in på ditt ID Shop-konto för att se priser, lägga beställningar och hantera fakturor.',
   ),
   register: pageMetadata(
-    'Registrera konto',
-    'Registrera ditt företag som kund hos ID Shop.',
+    'Registrera företagskonto',
+    'Registrera ditt företag som B2B-kund hos ID Shop och få tillgång till sortiment och priser efter godkännande.',
   ),
   resetPassword: pageMetadata(
     'Återställ lösenord',
-    'Begär en länk för att återställa ditt ID Shop-lösenord.',
+    'Begär en säker länk för att återställa lösenordet till ditt ID Shop-konto.',
   ),
   updatePassword: pageMetadata(
-    'Nytt lösenord',
-    'Ange ett nytt lösenord för ditt ID Shop-konto.',
+    'Välj nytt lösenord',
+    'Ange ett nytt lösenord för ditt ID Shop-konto efter inbjudan eller återställning.',
   ),
   pendingApproval: pageMetadata(
-    'Väntar på godkännande',
-    'Ditt konto granskas. Du får tillgång till priser och beställning när det är godkänt.',
+    'Konto väntar på godkännande',
+    'Ditt företagskonto granskas av ID Shop. Du får tillgång till priser och beställning när det är godkänt.',
   ),
   authCallback: pageMetadata(
-    'Autentisering',
-    'Slutför inloggning till ID Shop.',
+    'Slutför inloggning',
+    'Slutför inloggning till ID Shop och fortsätt till ditt konto.',
   ),
 } as const
 
 export const authMeta = {
   login: pageMetadata(
-    'Log in',
-    'Sign in to the ID Shop admin platform.',
+    'Admin Login',
+    'Sign in to the ID Shop admin platform to manage sales, inventory, customers, and invoices.',
   ),
   resetPassword: pageMetadata(
-    'Reset password',
-    'Request a password reset link for your ID Shop admin account.',
+    'Reset Admin Password',
+    'Request a secure password reset link for your ID Shop admin account.',
   ),
 } as const
+
+export const platformRobots: Metadata['robots'] = { index: false, follow: false }
+export const storefrontRobots: Metadata['robots'] = { index: true, follow: true }
+export const authRobots: Metadata['robots'] = { index: false, follow: false }
+
+/** Merge noindex robots into page metadata (login, password reset, etc.) */
+export function withNoIndex(meta: Metadata): Metadata {
+  return { ...meta, robots: authRobots }
+}

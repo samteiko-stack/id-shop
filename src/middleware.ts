@@ -100,7 +100,7 @@ export async function middleware(request: NextRequest) {
 
   /* ── Step 2: Shop auth pages — redirect if already logged in as customer ── */
   if (SHOP_AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
-    if (user && user.user_metadata?.role === 'customer') {
+    if (user && sessionRole === 'customer') {
       return NextResponse.redirect(new URL(SHOP_DEFAULT_REDIRECT, request.url))
     }
     return supabaseResponse

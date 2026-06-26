@@ -1,4 +1,5 @@
 import { createCookieClient } from '@/lib/supabase/server'
+import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
 import type { UserRole } from '@/types'
 
 type StorefrontCustomer = {
@@ -48,4 +49,49 @@ export async function getStorefrontAuthContext(): Promise<StorefrontAuthContext 
     role,
     customer,
   }
+}
+
+export type StorefrontShopBanner = 'login' | 'pending' | null
+
+export type StorefrontCustomerProps = {
+  isLoggedIn: boolean
+  isApproved: boolean
+  customerId: string | null
+  discountRate: number
+  shopBanner: StorefrontShopBanner
+}
+
+/** Shop customer session for catalog pages — uses database role, not auth metadata. */
+export function getStorefrontCustomerProps(auth: StorefrontAuthContext | null): Omit<StorefrontCustomerProps, 'discountRate'> {
+  const isShopCustomer = auth?.role === 'customer' && !!auth.customer
+
+  let shopBanner: StorefrontShopBanner = null
+  if (!auth) {
+    shopBanner = 'login'
+  } else if (auth.role === 'customer') {
+    if (!auth.customer) {
+      shopBanner = 'login'
+    } else if (!auth.customer.is_approved) {
+      shopBanner = 'pending'
+    }
+  }
+
+  return {
+    isLoggedIn: isShopCustomer,
+    isApproved: auth?.customer?.is_approved ?? false,
+    customerId: auth?.customer?.id ?? null,
+    shopBanner,
+  }
+}
+
+export async function getStorefrontCustomerPropsWithDiscount(): Promise<StorefrontCustomerProps> {
+  const auth = await getStorefrontAuthContext()
+  const props = getStorefrontCustomerProps(auth)
+  let discountRate = 0
+
+  if (props.isLoggedIn && auth) {
+    discountRate = await getCustomerDiscountRate(auth.supabase, auth.user.id)
+  }
+
+  return { ...props, discountRate }
 }

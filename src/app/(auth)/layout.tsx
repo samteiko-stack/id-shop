@@ -1,4 +1,10 @@
+import type { Metadata } from 'next'
 import { AuthBrandHeadline, AuthBrandPanel } from '@/components/auth/auth-brand-panel'
+import { authRobots } from '@/lib/metadata'
+
+export const metadata: Metadata = {
+  robots: authRobots,
+}
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

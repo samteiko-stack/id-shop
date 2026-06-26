@@ -1,14 +1,13 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { Breadcrumb, type BreadcrumbItem } from '@/components/ui/breadcrumb'
 import { ProductsDisplay } from '../products-display'
 import { CategoryCard } from '@/components/shop/category-card'
 import { StorefrontContainer } from '@/components/layout/storefront-container'
 import { StorefrontPageHero } from '@/components/storefront/storefront-page-hero'
-import { getCustomerDiscountRate } from '@/lib/storefront/customer-discount'
 import { getCachedCategoryPageData } from '@/lib/storefront/cached-queries'
 import type { Metadata } from 'next'
 import { shopMeta } from '@/lib/metadata'
+import { getStorefrontCustomerPropsWithDiscount } from '@/lib/storefront/auth-context'
 
 interface PageProps {
   params: Promise<{ slug: string[] }>
@@ -22,31 +21,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return shopMeta.category(last.name)
 }
 
-async function getCustomerContext() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (user?.user_metadata?.role !== 'customer') {
-    return { isLoggedIn: !!user, isApproved: false, discountRate: 0 }
-  }
-
-  const { data: customer } = await supabase
-    .from('customers')
-    .select('is_approved')
-    .eq('auth_user_id', user.id)
-    .single()
-
-  const isApproved = customer?.is_approved ?? false
-  const discountRate = await getCustomerDiscountRate(supabase, user.id)
-
-  return { isLoggedIn: true, isApproved, discountRate }
-}
-
 export default async function CategoryPage({ params }: PageProps) {
   const { slug } = await params
-  const [data, { isLoggedIn, isApproved, discountRate }] = await Promise.all([
+  const [data, { isLoggedIn, isApproved, discountRate, shopBanner }] = await Promise.all([
     getCachedCategoryPageData(slug),
-    getCustomerContext(),
+    getStorefrontCustomerPropsWithDiscount(),
   ])
 
   if (!data) notFound()
@@ -103,6 +82,7 @@ export default async function CategoryPage({ params }: PageProps) {
           isApproved={isApproved}
           isLoggedIn={isLoggedIn}
           discountRate={discountRate}
+          shopBanner={shopBanner}
         />
       </StorefrontContainer>
     </>

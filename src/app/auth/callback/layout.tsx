@@ -1,6 +1,6 @@
-import { shopMeta } from '@/lib/metadata'
+import { shopMeta, withNoIndex } from '@/lib/metadata'
 
-export const metadata = shopMeta.authCallback
+export const metadata = withNoIndex(shopMeta.authCallback)
 
 export default function AuthCallbackLayout({ children }: { children: React.ReactNode }) {
   return children

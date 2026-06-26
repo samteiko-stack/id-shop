@@ -11,6 +11,7 @@ import { StorefrontContainer } from '@/components/layout/storefront-container'
 import { StorefrontPageHero } from '@/components/storefront/storefront-page-hero'
 import { CategoryStrip, type CategoryStripItem } from '@/components/shop/category-strip'
 import { applyGeneralDiscount } from '@/lib/discounts'
+import type { StorefrontShopBanner } from '@/lib/storefront/auth-context'
 
 interface Product {
   id: string
@@ -44,9 +45,10 @@ interface Props {
   isApproved: boolean
   customerId: string | null
   discountRate?: number
+  shopBanner?: StorefrontShopBanner
 }
 
-export function ShopClient({ products, mainCategories, categories, isLoggedIn, isApproved, discountRate = 0 }: Props) {
+export function ShopClient({ products, mainCategories, categories, isLoggedIn, isApproved, discountRate = 0, shopBanner }: Props) {
   const searchParams = useSearchParams()
   const [search, setSearch] = useState(() => searchParams.get('q') ?? '')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(() => searchParams.get('category') ?? null)
@@ -119,9 +121,9 @@ export function ShopClient({ products, mainCategories, categories, isLoggedIn, i
       </StorefrontPageHero>
 
       <StorefrontContainer pageSpacing>
-      {(!isLoggedIn || !isApproved) && (
+      {shopBanner && (
         <div className="mb-8 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-          {!isLoggedIn ? (
+          {shopBanner === 'login' ? (
             <>
               <Link href="/shop/login" className="text-primary font-medium hover:underline">
                 Logga in som företag

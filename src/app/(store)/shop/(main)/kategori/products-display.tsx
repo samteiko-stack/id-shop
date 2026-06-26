@@ -9,6 +9,7 @@ import { AddToCartControls } from '@/components/shop/add-to-cart-controls'
 import { formatCurrency } from '@/lib/utils'
 import { applyGeneralDiscount } from '@/lib/discounts'
 import type { Product } from '@/types'
+import type { StorefrontShopBanner } from '@/lib/storefront/auth-context'
 
 interface Props {
   products: Product[]
@@ -17,6 +18,7 @@ interface Props {
   isApproved: boolean
   isLoggedIn: boolean
   discountRate?: number
+  shopBanner?: StorefrontShopBanner
 }
 
 function ProductRow({

@@ -1,9 +1,15 @@
+import type { Metadata } from 'next'
 import { ShopHeader } from '@/app/(store)/shop/(main)/shop-header'
 import { ShopFooter } from '@/app/(store)/shop/(main)/shop-footer'
 import { getFooterCategoryGroups } from '@/lib/storefront/footer-categories'
 import { StorefrontToaster } from '@/components/layout/storefront-toaster'
 import { getStorefrontAuthContext } from '@/lib/storefront/auth-context'
 import { createClient } from '@/lib/supabase/server'
+import { storefrontRobots } from '@/lib/metadata'
+
+export const metadata: Metadata = {
+  robots: storefrontRobots,
+}
 
 export default async function HomeLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()

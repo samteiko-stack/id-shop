@@ -13,14 +13,14 @@ const MATERIAL_SYMBOLS_URL =
 
 export const metadata: Metadata = {
   title: {
-    default: 'ID Shop — Medical Supply Management',
+    default: 'ID Shop — Medical & Dental Supply for Clinics',
     template: '%s | ID Shop',
   },
-  description: 'Internal business management platform for medical and dental supplies.',
-  robots: {
-    index: false,
-    follow: false,
-  },
+  description:
+    'ID Shop supplies certified medical and dental consumables to clinics and healthcare providers in Sweden.',
+  metadataBase: process.env.NEXT_PUBLIC_APP_URL
+    ? new URL(process.env.NEXT_PUBLIC_APP_URL)
+    : undefined,
 }
 
 export default function RootLayout({

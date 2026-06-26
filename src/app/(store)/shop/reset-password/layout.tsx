@@ -1,6 +1,6 @@
-import { shopMeta } from '@/lib/metadata'
+import { shopMeta, withNoIndex } from '@/lib/metadata'
 
-export const metadata = shopMeta.resetPassword
+export const metadata = withNoIndex(shopMeta.resetPassword)
 
 export default function ShopResetPasswordLayout({ children }: { children: React.ReactNode }) {
   return children

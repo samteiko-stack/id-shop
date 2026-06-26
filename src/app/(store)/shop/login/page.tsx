@@ -45,18 +45,20 @@ function LoginForm() {
       return
     }
 
-    if (data.user?.user_metadata?.role !== 'customer') {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role, is_active')
+      .eq('id', data.user!.id)
+      .maybeSingle()
+
+    const role = profile?.role ?? data.user?.user_metadata?.role
+
+    if (role !== 'customer') {
       await supabase.auth.signOut()
       setError('Den här inloggningen är endast för kunder. Personal använder huvudinloggningen.')
       setLoading(false)
       return
     }
-
-    const { data: profile } = await supabase
-      .from('users')
-      .select('is_active')
-      .eq('id', data.user.id)
-      .maybeSingle()
 
     if (profile?.is_active === false) {
       await supabase.auth.signOut()

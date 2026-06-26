@@ -11,26 +11,31 @@ import Link from 'next/link'
 import { useRole } from '@/hooks/use-role'
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':       'Dashboard',
-  '/products':        'Products',
-  '/categories':      'Categories',
-  '/customers':       'Customers',
-  '/orders':          'Sales',
-  '/invoices':        'Invoices',
-  '/credit-invoices': 'Credit Invoices',
-  '/programs':        'Programs Management',
-  '/news':            'News',
-  '/traceability':    'Traceability',
-  '/reports':         'Reports',
-  '/users':           'User Management',
-  '/settings':        'Settings',
+  '/dashboard':        'Business Dashboard',
+  '/products':         'Product Catalog',
+  '/categories':       'Product Categories',
+  '/subcategories':    'Product Sub-categories',
+  '/families':         'Product Families',
+  '/customers':        'Customer Accounts',
+  '/orders':           'Sales & Orders',
+  '/invoices':         'Invoices & Receivables',
+  '/credit-invoices':  'Credit Notes',
+  '/discount-groups':  'Discount Groups',
+  '/programs':         'Training Programs',
+  '/news':             'News & Content',
+  '/traceability':     'LOT Traceability',
+  '/reports':          'Sales & Inventory Reports',
+  '/archive':          'Archive',
+  '/users/audit-log':  'Audit Log',
+  '/users':            'User Management',
+  '/settings':         'Company Settings',
 }
 
 function getPageTitle(pathname: string): string {
   const match = Object.keys(PAGE_TITLES)
     .sort((a, b) => b.length - a.length)
     .find((key) => pathname.startsWith(key))
-  return match ? PAGE_TITLES[match] : 'Dashboard'
+  return match ? PAGE_TITLES[match] : 'ID Shop Admin'
 }
 
 function getInitials(name: string) {
