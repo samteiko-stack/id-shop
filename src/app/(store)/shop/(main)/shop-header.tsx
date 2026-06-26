@@ -230,10 +230,6 @@ export function ShopHeader({ customer, showAdminLink = false, cartCount, topCate
                 </>
               ) : (
                 <>
-                  <ButtonLink href="/login" variant="ghost" className="gap-2 text-muted-foreground font-medium hidden sm:flex">
-                    <LayoutDashboard className="h-4 w-4" />
-                    Personal
-                  </ButtonLink>
                   <ButtonLink href="/shop/register" variant="ghost" className="gap-2 text-muted-foreground font-medium hidden sm:flex">
                     <User className="h-4 w-4" />
                     Registrera
@@ -280,15 +276,10 @@ export function ShopHeader({ customer, showAdminLink = false, cartCount, topCate
             <Link href="/shop/om-oss" onClick={() => setMobileOpen(false)} className={cn('block px-3 py-2.5 rounded-lg text-sm font-medium', pathname.startsWith('/shop/om-oss') ? 'text-primary' : 'text-foreground hover:bg-muted')}>Om oss</Link>
             <Link href="/shop/nyheter" onClick={() => setMobileOpen(false)} className={cn('block px-3 py-2.5 rounded-lg text-sm font-medium', pathname.startsWith('/shop/nyheter') ? 'text-primary' : 'text-foreground hover:bg-muted')}>Nyheter</Link>
 
-            {!customer && !showAdminLink && (
-              <>
-                <Link href="/login" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted">
-                  Personalinloggning
-                </Link>
-                <Link href="/shop/register" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted">
-                  Registrera
-                </Link>
-              </>
+            {!customer && (
+              <Link href="/shop/register" onClick={() => setMobileOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-muted">
+                Registrera
+              </Link>
             )}
             {customer && (
               <div className="pt-2 border-t border-border">

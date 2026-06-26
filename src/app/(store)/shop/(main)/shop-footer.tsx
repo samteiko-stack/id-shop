@@ -184,14 +184,15 @@ export function ShopFooter({ categoryGroups = [] }: ShopFooterProps) {
         <StorefrontContainer className="py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/50 text-center sm:text-left">
             © {year} Infinity Dental Shop. Alla rättigheter reserverade.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            <span className="hidden sm:inline text-white/30 mx-2">·</span>
             <Link
               href="/login"
-              className="text-xs text-white/55 hover:text-white transition-colors"
+              className="block sm:inline mt-2 sm:mt-0 text-white/40 hover:text-white/70 transition-colors"
             >
-              Personalinloggning
+              Inloggning för personal
             </Link>
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             <a
               href={`mailto:${COMPANY.email}`}
               className="text-xs text-white/55 hover:text-white transition-colors"
