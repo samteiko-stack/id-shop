@@ -34,7 +34,7 @@ function toProductOptions(
     description: product.ref,
     hint:
       showPrice && product.unit_price != null
-        ? formatCurrency(product.unit_price, product.currency ?? 'EUR')
+        ? formatCurrency(product.unit_price, product.currency ?? 'SEK')
         : undefined,
     keywords: [product.ref, product.name],
   }))

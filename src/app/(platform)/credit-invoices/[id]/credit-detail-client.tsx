@@ -18,7 +18,7 @@ type CreditWithRelations = CreditInvoice & {
 
 export function CreditDetailClient({ credit }: { credit: CreditWithRelations }) {
   const { canWrite } = useRole()
-  const currency = credit.invoice?.currency ?? 'EUR'
+  const currency = credit.invoice?.currency ?? 'SEK'
 
   return (
     <PageContainer>

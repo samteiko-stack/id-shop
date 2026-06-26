@@ -112,7 +112,7 @@ export const invoiceSchema = z.object({
   order_id:    z.string().uuid().optional().nullable(),
   customer_id: z.string().uuid('Customer is required'),
   tax_rate:    z.number().min(0).max(100).default(DEFAULT_VAT_RATE),
-  currency:    z.string().length(3).default('EUR'),
+  currency:    z.string().length(3).default('SEK'),
   issue_date:  z.string().date(),
   due_date:    z.string().date().optional().nullable(),
   notes:       z.string().max(2000).optional().nullable(),

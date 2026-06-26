@@ -59,7 +59,7 @@ export function CartClient({
     discount_rate: discountRate,
     extra_discount_rate: extraDiscountRate,
   })
-  const currency = 'EUR'
+  const currency = 'SEK'
 
   function handleUpdate(itemId: string, qty: number) {
     startTransition(async () => {
@@ -161,7 +161,7 @@ export function CartClient({
                     <p className="font-semibold text-sm text-foreground truncate">{item.products?.name}</p>
                     <p className="text-xs text-muted-foreground">REF: {item.products?.ref}</p>
                     <p className="text-sm font-medium text-foreground mt-1">
-                      EUR {unitPrice.toFixed(2)} each
+                      {currency} {unitPrice.toFixed(2)} st
                     </p>
                   </div>
 

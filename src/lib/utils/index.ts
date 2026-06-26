@@ -7,8 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatCurrency(
   amount: number,
-  currency = 'EUR',
-  locale = 'pt-PT'
+  currency = 'SEK',
+  locale = 'sv-SE'
 ): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
@@ -25,13 +25,13 @@ export function formatDate(
     day: 'numeric',
   }
 ): string {
-  return new Intl.DateTimeFormat('pt-PT', options).format(
+  return new Intl.DateTimeFormat('sv-SE', options).format(
     typeof date === 'string' ? new Date(date) : date
   )
 }
 
 export function formatDateTime(date: string | Date): string {
-  return new Intl.DateTimeFormat('pt-PT', {
+  return new Intl.DateTimeFormat('sv-SE', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

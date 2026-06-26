@@ -167,7 +167,7 @@ export function InvoicesClient({ initialInvoices, customers, fromOrder, defaultT
         order_id: orderId || null,
         customer_id: customerId,
         tax_rate: taxRate,
-        currency: 'EUR',
+        currency: 'SEK',
         issue_date: issueDate,
         due_date: dueDate || null,
         notes: notes || null,
