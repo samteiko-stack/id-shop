@@ -80,6 +80,37 @@ export async function assignBatchToOrderItem(input: {
   return { data: { batchId } }
 }
 
+const BATCH_SEARCH_SELECT = `
+  id, ref, lot_number, expiry_date, scanned_at, raw_qr_payload,
+  product:products(id, name, ref),
+  order_item_batches(
+    id, quantity, created_at,
+    order_item:order_items(
+      id, quantity, unit_price,
+      order:orders(
+        id, order_number, created_at,
+        customer:customers(id, name, email, phone)
+      ),
+      product:products(name, ref)
+    )
+  )
+`
+
+function normalizeLot(value: string): string {
+  return value.replace(/[\s-]/g, '').toLowerCase()
+}
+
+function lotMatchesQuery(lotNumber: string, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  const lot = lotNumber.toLowerCase()
+  if (lot.includes(q) || q.includes(lot)) return true
+
+  const compactQ = normalizeLot(query)
+  const compactLot = normalizeLot(lotNumber)
+  if (!compactQ || !compactLot) return false
+  return compactLot.includes(compactQ) || compactQ.includes(compactLot)
+}
+
 export async function searchTraceability(query: string) {
   const auth = await requireWriteAccess()
   if ('error' in auth) return { error: auth.error }
@@ -91,24 +122,28 @@ export async function searchTraceability(query: string) {
 
   const { data, error } = await supabase
     .from('product_batches')
-    .select(`
-      id, ref, lot_number, expiry_date, scanned_at, raw_qr_payload,
-      product:products(id, name, ref),
-      order_item_batches(
-        quantity,
-        order_item:order_items(
-          id, quantity, unit_price,
-          order:orders(
-            id, order_number, created_at,
-            customer:customers(id, name, email, phone)
-          ),
-          product:products(name, ref)
-        )
-      )
-    `)
+    .select(BATCH_SEARCH_SELECT)
     .or(`lot_number.ilike.%${q}%,ref.ilike.%${q}%`)
     .order('scanned_at', { ascending: false })
+    .limit(50)
 
   if (error) return { error: error.message }
-  return { data: data ?? [] }
+
+  let results = data ?? []
+  const compact = normalizeLot(q)
+
+  if (results.length === 0 && compact.length >= 4) {
+    const tail = compact.slice(-Math.min(10, compact.length))
+    const { data: lotCandidates, error: lotError } = await supabase
+      .from('product_batches')
+      .select(BATCH_SEARCH_SELECT)
+      .ilike('lot_number', `%${tail}%`)
+      .order('scanned_at', { ascending: false })
+      .limit(50)
+
+    if (lotError) return { error: lotError.message }
+    results = (lotCandidates ?? []).filter((batch) => lotMatchesQuery(batch.lot_number, q))
+  }
+
+  return { data: results }
 }

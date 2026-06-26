@@ -236,6 +236,8 @@ interface QRScannerProps {
   disabled?: boolean
   placeholder?: string
   label?: string
+  /** Reflect manual entry in the parsed summary (scan payload stays unchanged). */
+  displayOverrides?: Partial<Pick<ParsedQRPayload, 'ref' | 'lot_number' | 'expiry_date'>>
 }
 
 const SCAN_DEBOUNCE_MS = 150 // HID scanners fire input rapidly then stop
@@ -245,6 +247,7 @@ export function QRScanner({
   disabled = false,
   placeholder = 'Focus here, then scan with your USB/BT scanner…',
   label = 'Scan QR Code',
+  displayOverrides,
 }: QRScannerProps) {
   const [value, setValue] = useState('')
   const [status, setStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle')
@@ -333,6 +336,10 @@ export function QRScanner({
 
   const current = statusConfig[status]
 
+  const displayRef = displayOverrides?.ref ?? lastResult?.payload.ref
+  const displayLot = displayOverrides?.lot_number ?? lastResult?.payload.lot_number
+  const displayExpiry = displayOverrides?.expiry_date ?? lastResult?.payload.expiry_date
+
   return (
     <div className="space-y-3">
       <div
@@ -388,19 +395,19 @@ export function QRScanner({
                 <div className="space-y-0.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">REF</p>
                   <p className="text-sm font-mono font-semibold text-foreground">
-                    {lastResult.payload.ref ?? <span className="text-muted-foreground italic">not found</span>}
+                    {displayRef ?? <span className="text-muted-foreground italic">not found</span>}
                   </p>
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">LOT</p>
                   <p className="text-sm font-mono font-semibold text-foreground">
-                    {lastResult.payload.lot_number ?? <span className="text-muted-foreground italic">not found</span>}
+                    {displayLot ?? <span className="text-muted-foreground italic">not found</span>}
                   </p>
                 </div>
                 <div className="space-y-0.5">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Expiry</p>
                   <p className="text-sm font-mono font-semibold text-foreground">
-                    {lastResult.payload.expiry_date ?? <span className="text-muted-foreground italic">not found</span>}
+                    {displayExpiry ?? <span className="text-muted-foreground italic">not found</span>}
                   </p>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { useRole } from '@/hooks/use-role'
 import { QRScanner, type QRScanResult } from '@/components/qr/qr-scanner'
 import { Button } from '@/components/ui/button'
@@ -12,17 +13,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, QrCode, Package, User, AlertTriangle } from '@/components/icons'
+import { Search, QrCode, Package, User, AlertTriangle, CheckCircle2, ChevronRight } from '@/components/icons'
 import { Alert, AlertIcon } from '@/components/ui/alert'
 import Link from 'next/link'
 import { assignBatchToOrderItem, searchTraceability } from './actions'
+import { cn } from '@/lib/utils'
 
 function formatOrderLabel(order: { order_number?: string; customer?: { name?: string } | null; created_at?: string }) {
   const customer = (order.customer as { name?: string } | null)?.name ?? 'Unknown customer'
   const date = order.created_at ? formatDateTime(order.created_at) : ''
   return date ? `${order.order_number} — ${customer} (${date})` : `${order.order_number} — ${customer}`
+}
+
+type TraceAssignment = {
+  id: string
+  quantity: number
+  created_at?: string
+  batch?: {
+    id: string
+    ref: string
+    lot_number: string
+    expiry_date: string
+    scanned_at?: string
+    raw_qr_payload?: string
+  } | null
 }
 
 interface Props {
@@ -32,6 +51,7 @@ interface Props {
 }
 
 export function TraceabilityClient({ openOrders, initialOrderId, initialSearch = '' }: Props) {
+  const router = useRouter()
   const { canScanQR } = useRole()
   const [activeTab, setActiveTab] = useState<string>('search')
   useEffect(() => { setActiveTab(canScanQR ? 'scan' : 'search') }, [canScanQR])
@@ -44,6 +64,8 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
   const [scanMissingExpiry, setScanMissingExpiry] = useState(false)
   const [confirmQuantity, setConfirmQuantity] = useState(1)
   const [isPending, startTransition] = useTransition()
+  const [selectedTrace, setSelectedTrace] = useState<TraceAssignment | null>(null)
+  const [hasSearched, setHasSearched] = useState(false)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState(initialSearch)
@@ -62,7 +84,6 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
     setScanMissingLot(!lot)
     setScanMissingExpiry(!expiry)
     if (result.isValid) {
-      // Auto-match REF to order items
       if (selectedOrder && result.payload.ref) {
         const matchedItem = selectedOrder.items?.find(
           (item: any) => item.product?.ref?.toLowerCase() === result.payload.ref?.toLowerCase()
@@ -107,16 +128,22 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
       setScanMissingLot(false)
       setScanMissingExpiry(false)
       setSelectedItemId('')
+      router.refresh()
     })
   }
 
   async function handleSearch() {
     if (!searchQuery.trim()) return
     setSearchLoading(true)
+    setHasSearched(true)
     const result = await searchTraceability(searchQuery)
     setSearchLoading(false)
     if (result.error) { toast.error(result.error); return }
     setSearchResults(result.data ?? [])
+  }
+
+  function openTraceDetail(assignment: TraceAssignment) {
+    setSelectedTrace(assignment)
   }
 
   return (
@@ -162,29 +189,76 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                   </Select>
 
                   {selectedOrder && (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label className="text-xs">Order items</Label>
                       {selectedOrder.items?.map((item: any) => {
-                        const tracedQty = item.batches?.reduce((s: number, b: any) => s + b.quantity, 0) ?? 0
+                        const assignments: TraceAssignment[] = item.batches ?? []
+                        const tracedQty = assignments.reduce((s, b) => s + b.quantity, 0)
                         const isFullyTraced = tracedQty >= item.quantity
+                        const isPartiallyTraced = tracedQty > 0 && !isFullyTraced
+                        const isSelected = selectedItemId === item.id
+
                         return (
-                          <Button
-                            key={item.id}
-                            variant="outline"
-                            onClick={() => setSelectedItemId(item.id)}
-                            className={`w-full justify-between text-sm ${
-                              selectedItemId === item.id
-                                ? 'border-primary bg-primary-subtle'
-                                : isFullyTraced
-                                ? 'border-success/30 bg-[var(--scan-success-bg)] text-muted-foreground'
-                                : 'hover:border-primary/40 hover:bg-primary-subtle'
-                            }`}
-                          >
-                            <span className="font-medium">{item.product?.name}</span>
-                            <span className={`text-xs ${isFullyTraced ? 'text-success' : tracedQty > 0 ? 'text-warning' : 'text-muted-foreground'}`}>
-                              {tracedQty}/{item.quantity} traced
-                            </span>
-                          </Button>
+                          <div key={item.id} className="space-y-1.5">
+                            <Button
+                              variant="outline"
+                              onClick={() => setSelectedItemId(item.id)}
+                              className={cn(
+                                'w-full h-auto py-3 flex-col items-stretch gap-2 text-sm',
+                                isSelected && 'border-primary ring-2 ring-primary/20 bg-primary-subtle',
+                                isFullyTraced && !isSelected && 'border-2 border-success bg-[var(--scan-success-bg)] shadow-sm',
+                                isPartiallyTraced && !isSelected && 'border-2 border-warning/60 bg-[var(--status-draft-bg)]',
+                              )}
+                            >
+                              <div className="flex w-full items-start justify-between gap-3">
+                                <div className="flex items-start gap-2 text-left">
+                                  {isFullyTraced && (
+                                    <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
+                                  )}
+                                  <div>
+                                    <span className="font-semibold block">{item.product?.name}</span>
+                                    <span className="text-xs text-muted-foreground font-mono">REF {item.product?.ref ?? '—'}</span>
+                                  </div>
+                                </div>
+                                <Badge
+                                  className={cn(
+                                    'shrink-0 border-0 font-semibold',
+                                    isFullyTraced
+                                      ? 'bg-[var(--success-500)] text-white'
+                                      : isPartiallyTraced
+                                      ? 'bg-[var(--warning-500)] text-white'
+                                      : 'bg-muted text-muted-foreground',
+                                  )}
+                                >
+                                  {isFullyTraced ? 'TRACED' : `${tracedQty}/${item.quantity} traced`}
+                                </Badge>
+                              </div>
+                            </Button>
+
+                            {assignments.length > 0 && (
+                              <div className="ml-1 space-y-1 border-l-2 border-success/40 pl-3">
+                                {assignments.map((assignment) => (
+                                  <button
+                                    key={assignment.id}
+                                    type="button"
+                                    onClick={() => openTraceDetail(assignment)}
+                                    className="flex w-full items-center justify-between gap-2 rounded-md border border-success/30 bg-[var(--scan-success-bg)] px-3 py-2 text-left text-xs transition-colors hover:border-success hover:bg-success/10"
+                                  >
+                                    <div>
+                                      <p className="font-mono font-semibold text-foreground">
+                                        LOT {assignment.batch?.lot_number ?? '—'}
+                                      </p>
+                                      <p className="text-muted-foreground">
+                                        Qty {assignment.quantity}
+                                        {assignment.batch?.expiry_date ? ` · Exp ${formatDate(assignment.batch.expiry_date)}` : ''}
+                                      </p>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 shrink-0 text-success" />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
                     </div>
@@ -205,21 +279,25 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                     onScan={handleScan}
                     disabled={!selectedOrderId}
                     placeholder={!selectedOrderId ? 'Select an order first…' : 'Scan QR code with USB/BT scanner…'}
+                    displayOverrides={{
+                      lot_number: manualLot.trim() || undefined,
+                      expiry_date: manualExpiry || undefined,
+                    }}
                   />
 
                   {scanResult?.isValid && selectedItemId && (
                     <div className="space-y-3 pt-2">
-                      {scanMissingLot && (
+                      {scanMissingLot && !manualLot.trim() && (
                         <Alert variant="warning">
                           <AlertIcon variant="warning"><AlertTriangle /></AlertIcon>
                           <div>
                             <p className="font-medium">LOT number not found in scan</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Enter the batch/lot from the package label.</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Enter the batch/lot from the package label below.</p>
                           </div>
                         </Alert>
                       )}
 
-                      {scanMissingLot && (
+                      {(scanMissingLot || manualLot.trim()) && (
                         <div className="space-y-1.5">
                           <Label className="text-xs">LOT number *</Label>
                           <Input
@@ -231,17 +309,17 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                         </div>
                       )}
 
-                      {scanMissingExpiry && (
+                      {scanMissingExpiry && !manualExpiry && (
                         <Alert variant="warning">
                           <AlertIcon variant="warning"><AlertTriangle /></AlertIcon>
                           <div>
                             <p className="font-medium">Expiry date not found in QR</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Please enter it manually.</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Please enter it manually below.</p>
                           </div>
                         </Alert>
                       )}
 
-                      {scanMissingExpiry && (
+                      {(scanMissingExpiry || manualExpiry) && (
                         <div className="space-y-1.5">
                           <Label className="text-xs">Expiry Date *</Label>
                           <Input
@@ -287,7 +365,7 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                 <div className="flex-1 space-y-2">
                   <Label>Search by LOT number or REF</Label>
                   <Input
-                    placeholder="e.g. LOT-XYZ123 or REF-456"
+                    placeholder="e.g. 02-41-25-2326 or EV43100"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -321,7 +399,7 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                           LOT: {batch.lot_number}
                         </Badge>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Exp: {batch.expiry_date}
+                          Exp: {formatDate(batch.expiry_date)}
                         </p>
                       </div>
                     </div>
@@ -332,7 +410,7 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                         Distributed to:
                       </p>
                       {batch.order_item_batches.map((oib: any) => (
-                        <div key={oib.order_item?.id} className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/40 border border-border">
+                        <div key={oib.id ?? oib.order_item?.id} className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/40 border border-border">
                           <div className="flex items-center gap-3">
                             <User className="h-4 w-4 text-muted-foreground shrink-0" />
                             <div>
@@ -364,13 +442,65 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
             </div>
           )}
 
-          {searchResults.length === 0 && searchQuery && !searchLoading && (
-            <div className="text-center py-12 text-muted-foreground text-sm">
-              No batches found matching &quot;{searchQuery}&quot;
+          {searchResults.length === 0 && hasSearched && !searchLoading && (
+            <div className="text-center py-12 text-muted-foreground text-sm space-y-1">
+              <p>No batches found matching &quot;{searchQuery}&quot;</p>
+              <p className="text-xs">Try with or without dashes, e.g. 0241252326 vs 02-41-25-2326</p>
             </div>
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!selectedTrace} onOpenChange={(open) => { if (!open) setSelectedTrace(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              Trace record
+            </DialogTitle>
+            <DialogDescription>
+              This assignment is permanent for regulatory traceability.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTrace?.batch && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm">
+              <dt className="text-muted-foreground">LOT</dt>
+              <dd className="font-mono font-semibold">{selectedTrace.batch.lot_number}</dd>
+
+              <dt className="text-muted-foreground">REF</dt>
+              <dd className="font-mono font-semibold">{selectedTrace.batch.ref}</dd>
+
+              <dt className="text-muted-foreground">Expiry</dt>
+              <dd className="font-mono">{formatDate(selectedTrace.batch.expiry_date)}</dd>
+
+              <dt className="text-muted-foreground">Quantity</dt>
+              <dd>{selectedTrace.quantity}</dd>
+
+              {selectedTrace.batch.scanned_at && (
+                <>
+                  <dt className="text-muted-foreground">Scanned</dt>
+                  <dd>{formatDateTime(selectedTrace.batch.scanned_at)}</dd>
+                </>
+              )}
+
+              {selectedTrace.created_at && (
+                <>
+                  <dt className="text-muted-foreground">Assigned</dt>
+                  <dd>{formatDateTime(selectedTrace.created_at)}</dd>
+                </>
+              )}
+
+              {selectedTrace.batch.raw_qr_payload && (
+                <>
+                  <dt className="text-muted-foreground">Raw scan</dt>
+                  <dd className="font-mono text-xs break-all">{selectedTrace.batch.raw_qr_payload}</dd>
+                </>
+              )}
+            </dl>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

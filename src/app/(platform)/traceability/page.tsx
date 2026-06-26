@@ -21,7 +21,10 @@ export default async function TraceabilityPage({
       items:order_items(
         id, product_id, quantity,
         product:products(id, name, ref),
-        batches:order_item_batches(quantity)
+        batches:order_item_batches(
+          id, quantity, created_at,
+          batch:product_batches(id, ref, lot_number, expiry_date, scanned_at, raw_qr_payload)
+        )
       )
     `)
     .in('status', ['confirmed'])

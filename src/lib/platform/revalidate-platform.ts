@@ -5,6 +5,7 @@ export function revalidateDashboard() {
   revalidateTag(PLATFORM_CACHE_TAGS.dashboard)
   revalidatePath('/dashboard')
   revalidatePath('/orders')
+  revalidatePath('/traceability')
 }
 
 export function revalidateCustomerReference() {
