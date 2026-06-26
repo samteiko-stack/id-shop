@@ -196,15 +196,15 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
     {
       key: 'date',
       header: 'Date',
-      className: 'w-[104px] whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (o: Order) => (
-        <span className="text-xs text-muted-foreground tabular-nums">{formatDateTime(o.created_at)}</span>
+        <span className="text-sm text-muted-foreground">{formatDateTime(o.created_at)}</span>
       ),
     },
     {
       key: 'order_number',
-      header: 'Ref',
-      className: 'w-[112px] whitespace-nowrap',
+      header: 'Reference No',
+      className: 'whitespace-nowrap',
       cell: (o: Order) => (
         <Link
           href={`/orders/${o.id}`}
@@ -215,12 +215,12 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
             }
           }}
           className={cn(
-            'text-xs text-foreground hover:text-primary transition-colors inline-flex items-center gap-1.5',
+            'text-sm text-foreground hover:text-primary transition-colors inline-flex items-center gap-2',
             isUnread(o.id) ? 'font-bold' : 'font-semibold',
           )}
         >
           {isUnread(o.id) && (
-            <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" title="New — not yet opened" />
+            <span className="h-2 w-2 rounded-full bg-primary shrink-0" title="New — not yet opened" />
           )}
           {o.order_number}
         </Link>
@@ -229,10 +229,10 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
     {
       key: 'customer',
       header: 'Customer',
-      className: 'min-w-0 max-w-[148px]',
+      className: 'max-w-[200px]',
       cell: (o: Order) => (
         <span
-          className={cn('text-xs text-foreground block truncate', isUnread(o.id) && 'font-semibold')}
+          className={cn('text-sm text-foreground block truncate', isUnread(o.id) && 'font-semibold')}
           title={(o.customer as any)?.name ?? undefined}
         >
           {(o.customer as any)?.name ?? '—'}
@@ -242,29 +242,27 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
     {
       key: 'source',
       header: 'Source',
-      className: 'w-[84px]',
       cell: (o: Order) => (
-        <StatusBadge status={o.source === 'storefront' ? 'storefront' : 'internal'} compact />
+        <StatusBadge status={o.source === 'storefront' ? 'storefront' : 'internal'} />
       ),
     },
     {
       key: 'status',
-      header: 'Status',
-      className: 'w-[88px]',
-      cell: (o: Order) => <StatusBadge status={o.status} compact />,
+      header: 'Sale Status',
+      cell: (o: Order) => <StatusBadge status={o.status} />,
     },
     {
       key: 'invoice',
       header: 'Invoice',
-      className: 'w-[96px] whitespace-nowrap',
+      className: 'whitespace-nowrap',
       cell: (o: Order) => {
         const order = o as any
-        if (!order.invoice_number) return <span className="text-xs text-muted-foreground">—</span>
+        if (!order.invoice_number) return <span className="text-sm text-muted-foreground">—</span>
         return (
           <Link
             href={`/invoices/${order.invoice_id}`}
             onClick={(e) => e.stopPropagation()}
-            className="text-xs font-medium text-primary hover:underline"
+            className="text-sm font-medium text-primary hover:underline"
           >
             {order.invoice_number}
           </Link>
@@ -273,57 +271,56 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
     },
     {
       key: 'total',
-      header: 'Total (SEK)',
-      className: 'w-[80px] text-right whitespace-nowrap',
+      header: 'Grand Total',
+      className: 'whitespace-nowrap text-right',
       cell: (o: Order) => {
         const total = (o as any).order_total ?? 0
-        return <span className="text-xs font-semibold text-foreground tabular-nums">{total.toFixed(2)}</span>
+        return <span className="text-sm font-semibold text-foreground tabular-nums">{total.toFixed(2)} SEK</span>
       },
     },
     {
       key: 'paid',
       header: 'Paid',
-      className: 'w-[68px] text-right whitespace-nowrap',
+      className: 'whitespace-nowrap text-right',
       cell: (o: Order) => {
         const order = o as any
         if (order.payment_status === 'not_invoiced') {
-          return <span className="text-xs text-muted-foreground">—</span>
+          return <span className="text-sm text-muted-foreground">—</span>
         }
         const paid = order.paid_amount || 0
-        return <span className="text-xs text-emerald-600 font-medium tabular-nums">{paid.toFixed(2)}</span>
+        return <span className="text-sm text-emerald-600 font-medium tabular-nums">{paid.toFixed(2)}</span>
       },
     },
     {
       key: 'balance',
       header: 'Balance',
-      className: 'w-[72px] text-right whitespace-nowrap',
+      className: 'whitespace-nowrap text-right',
       cell: (o: Order) => {
         const order = o as any
         if (order.payment_status === 'not_invoiced') {
-          return <span className="text-xs text-muted-foreground">—</span>
+          return <span className="text-sm text-muted-foreground">—</span>
         }
         const balance = order.balance || 0
-        return <span className="text-xs text-amber-600 font-medium tabular-nums">{balance.toFixed(2)}</span>
+        return <span className="text-sm text-amber-600 font-medium tabular-nums">{balance.toFixed(2)}</span>
       },
     },
     {
       key: 'payment_status',
-      header: 'Payment',
-      className: 'w-[96px]',
+      header: 'Payment Status',
       cell: (o: Order) => {
         const paymentStatus = (o as any).payment_status || 'not_invoiced'
-        return <StatusBadge status={paymentStatus} type="payment" compact />
+        return <StatusBadge status={paymentStatus} type="payment" />
       },
     },
     ...(canWrite ? [{
       key: 'actions',
       header: '',
-      className: 'w-9 px-1',
+      className: 'w-12',
       stopPropagation: true,
       cell: (o: Order) => (
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
-            <MoreHorizontal className="h-3.5 w-3.5" />
+          <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+            <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => router.push(`/orders/${o.id}`)} className="gap-2">
@@ -435,8 +432,6 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
       <DataTable 
         columns={columns} 
         data={filtered} 
-        compact
-        fixedLayout
         emptyMessage="No sales found." 
         onRowClick={handleRowClick}
         rowClassName={(o) =>

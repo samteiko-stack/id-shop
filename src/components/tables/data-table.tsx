@@ -59,10 +59,10 @@ export function DataTable<T extends { id: string }>({
   const someSelected = data.some(row => selectedIds.has(row.id)) && !allSelected
   const selectionColumnClass = compact ? 'w-10 min-w-10 max-w-10 px-2' : 'w-12 min-w-12 max-w-12 px-4'
   const headClass = compact
-    ? 'text-[11px] font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-8 px-2.5'
-    : 'text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-10 px-4'
-  const cellClass = compact ? 'px-2.5 py-2 align-middle' : 'px-4 py-4 align-middle'
-  const selectCellPy = compact ? 'py-2' : 'py-4'
+    ? 'text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-9 px-3'
+    : 'text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-10 px-3.5'
+  const cellClass = compact ? 'px-3 py-2.5 align-middle' : 'px-3.5 py-3 align-middle'
+  const selectCellPy = compact ? 'py-2.5' : 'py-3'
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
