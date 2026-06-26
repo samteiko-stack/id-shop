@@ -65,6 +65,14 @@ export function paymentStatusLabel(status: InvoiceSettlement['status']): string 
   }
 }
 
+export function invoicePdfStatusLabel(
+  invoiceStatus: string | undefined,
+  settlementStatus: InvoiceSettlement['status'] | undefined,
+): string {
+  if (invoiceStatus === 'cancelled') return 'Makulerad'
+  return paymentStatusLabel(settlementStatus ?? 'unpaid')
+}
+
 export function formatLineDescription(item: {
   description: string
   product?: { ref?: string | null; name?: string | null } | null

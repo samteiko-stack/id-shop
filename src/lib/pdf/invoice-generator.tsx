@@ -13,7 +13,7 @@ import { getCustomerFacingLineItems } from '@/lib/discounts'
 import type { InvoiceSettlement } from '@/lib/invoice-settlement'
 import {
   formatLineDescription,
-  paymentStatusLabel,
+  invoicePdfStatusLabel,
   SUPPLIER_LOGO,
   type InvoiceCompanySettings,
 } from '@/lib/pdf/invoice-pdf-context'
@@ -245,7 +245,8 @@ function FakturaDocument({ invoice, company, settlement }: GenerateInvoicePDFOpt
 
   const paid = settlement?.paid ?? 0
   const balance = settlement?.balanceDue ?? Number(invoice.total)
-  const paymentStatus = paymentStatusLabel(settlement?.status ?? 'unpaid')
+  const isCancelled = invoice.status === 'cancelled'
+  const paymentStatus = invoicePdfStatusLabel(invoice.status, settlement?.status)
 
   const customerOrg =
     invoice.customer?.org_number?.trim() ||
@@ -316,8 +317,8 @@ function FakturaDocument({ invoice, company, settlement }: GenerateInvoicePDFOpt
               <Text style={styles.metaSideValue}>{invoice.invoice_number}</Text>
             </View>
             <View style={styles.metaSideRow}>
-              <Text style={styles.metaSideLabel}>Betalningsstatus:</Text>
-              <Text style={styles.metaSideValue}>{paymentStatus}</Text>
+              <Text style={styles.metaSideLabel}>{isCancelled ? 'Status:' : 'Betalningsstatus:'}</Text>
+              <Text style={[styles.metaSideValue, isCancelled ? { color: C.red } : {}]}>{paymentStatus}</Text>
             </View>
             <View style={styles.metaSideRow}>
               <Text style={styles.metaSideLabel}>Förfallodatum:</Text>

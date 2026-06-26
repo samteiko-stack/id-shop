@@ -497,6 +497,7 @@ export async function revertOrderFulfillment(orderId: string) {
       .eq('id', invoice.id)
 
     if (cancelError) return actionError(cancelError)
+    await invalidateInvoicePdf(supabase, invoice.id)
   }
 
   const { error } = await supabase
