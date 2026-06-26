@@ -29,6 +29,10 @@ interface DataTableProps<T> {
   loading?: boolean
   emptyMessage?: string
   onRowClick?: (row: T) => void
+  /** Tighter row/header padding for wide tables */
+  compact?: boolean
+  /** Fixed column layout — helps wide tables fit without horizontal scroll */
+  fixedLayout?: boolean
   // Bulk selection
   selectable?: boolean
   selectedIds?: Set<string>
@@ -43,6 +47,8 @@ export function DataTable<T extends { id: string }>({
   loading = false,
   emptyMessage = 'No results found.',
   onRowClick,
+  compact = false,
+  fixedLayout = false,
   selectable = false,
   selectedIds = new Set(),
   onSelectAll,
@@ -51,9 +57,16 @@ export function DataTable<T extends { id: string }>({
 }: DataTableProps<T>) {
   const allSelected = data.length > 0 && data.every(row => selectedIds.has(row.id))
   const someSelected = data.some(row => selectedIds.has(row.id)) && !allSelected
+  const selectionColumnClass = compact ? 'w-10 min-w-10 max-w-10 px-2' : 'w-12 min-w-12 max-w-12 px-4'
+  const headClass = compact
+    ? 'text-[11px] font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-8 px-2.5'
+    : 'text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-10 px-4'
+  const cellClass = compact ? 'px-2.5 py-2 align-middle' : 'px-4 py-4 align-middle'
+  const selectCellPy = compact ? 'py-2' : 'py-4'
+
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
-      <Table>
+      <Table className={cn(fixedLayout && 'table-fixed w-full')}>
         <TableHeader>
           <TableRow className="bg-[var(--table-header-bg)] hover:bg-[var(--table-header-bg)]">
             {selectable && (
@@ -71,10 +84,7 @@ export function DataTable<T extends { id: string }>({
             {columns.map((col) => (
               <TableHead
                 key={col.key}
-                className={cn(
-                  'text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide h-10 px-4',
-                  col.className
-                )}
+                className={cn(headClass, col.className)}
               >
                 {col.header}
               </TableHead>
@@ -93,7 +103,7 @@ export function DataTable<T extends { id: string }>({
                   </TableCell>
                 )}
                 {columns.map((col) => (
-                  <TableCell key={col.key}>
+                  <TableCell key={col.key} className={cellClass}>
                     <Skeleton className="h-4 w-full max-w-[120px]" />
                   </TableCell>
                 ))}
@@ -123,7 +133,7 @@ export function DataTable<T extends { id: string }>({
                   )}
                 >
                   {selectable && (
-                    <TableCell className={cn(selectionColumnClass, 'py-4')} onClick={(e) => e.stopPropagation()}>
+                    <TableCell className={cn(selectionColumnClass, selectCellPy)} onClick={(e) => e.stopPropagation()}>
                       <div className={selectionCellClass}>
                         <Checkbox
                           checked={isSelected}
@@ -136,7 +146,7 @@ export function DataTable<T extends { id: string }>({
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
-                      className={cn('px-4 py-4 align-middle', col.className)}
+                      className={cn(cellClass, col.className)}
                       onClick={col.stopPropagation ? (e) => e.stopPropagation() : undefined}
                     >
                       {col.cell(row)}
