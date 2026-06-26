@@ -21,7 +21,7 @@ export interface ParsedQRPayload {
   lot_number?: string
   expiry_date?: string // ISO date YYYY-MM-DD
   raw: string
-  parseFormat: 'gs1' | 'delimited' | 'json' | 'unknown'
+  parseFormat: 'gs1' | 'delimited' | 'json' | 'plain_ref' | 'unknown'
 }
 
 const GS1_AI_MAP: Record<string, keyof ParsedQRPayload> = {
@@ -138,6 +138,20 @@ function normalizeDate(dateStr: string): string {
   return dateStr
 }
 
+/** Single product REF barcode (e.g. AB-53AN, B31040, 3M-RX-U200) */
+function parsePlainRef(raw: string): ParsedQRPayload | null {
+  const value = raw.trim()
+  if (!value || value.length > 64) return null
+  if (/[:=|{}]/.test(value) || value.includes('(')) return null
+  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(value)) return null
+
+  return {
+    raw: value,
+    ref: value,
+    parseFormat: 'plain_ref',
+  }
+}
+
 export function parseQRPayload(raw: string): ParsedQRPayload {
   const trimmed = raw.trim()
 
@@ -158,6 +172,10 @@ export function parseQRPayload(raw: string): ParsedQRPayload {
     const delimResult = parseDelimited(trimmed)
     if (delimResult) return delimResult
   }
+
+  // Plain product REF barcode (no LOT/expiry in label)
+  const plainRef = parsePlainRef(trimmed)
+  if (plainRef) return plainRef
 
   // Unknown format — return raw
   return { raw: trimmed, parseFormat: 'unknown' }
@@ -213,7 +231,7 @@ export function QRScanner({
 
       const isValid = !!(payload.ref || payload.lot_number)
       const validationError = !isValid
-        ? 'Could not extract REF or LOT from this QR code. Try manual entry.'
+        ? 'Could not extract REF or LOT. Scan a product code (e.g. AB-53AN) or a full QR with LOT/expiry.'
         : undefined
 
       const result: QRScanResult = { payload, isValid, validationError }

@@ -62,6 +62,10 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
 
   function handleAssign() {
     if (!scanResult?.isValid || !selectedItemId) return
+    if (!scanResult.payload.lot_number?.trim()) {
+      toast.error('LOT number is required. Enter it manually if it was not in the scan.')
+      return
+    }
     if (!scanResult.payload.expiry_date) {
       toast.error('Expiry date is required. Enter it manually or check the QR format.')
       return
@@ -176,6 +180,34 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
 
                   {scanResult?.isValid && selectedItemId && (
                     <div className="space-y-3 pt-2">
+                      {!scanResult.payload.lot_number && (
+                        <Alert variant="warning">
+                          <AlertIcon variant="warning"><AlertTriangle /></AlertIcon>
+                          <div>
+                            <p className="font-medium">LOT number not found in scan</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Enter the batch/lot from the package label.</p>
+                          </div>
+                        </Alert>
+                      )}
+
+                      {!scanResult.payload.lot_number && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">LOT number *</Label>
+                          <Input
+                            placeholder="e.g. LOT2024-8841"
+                            onChange={(e) => {
+                              if (scanResult) {
+                                setScanResult({
+                                  ...scanResult,
+                                  payload: { ...scanResult.payload, lot_number: e.target.value.trim() },
+                                })
+                              }
+                            }}
+                            className="font-mono"
+                          />
+                        </div>
+                      )}
+
                       {!scanResult.payload.expiry_date && (
                         <Alert variant="warning">
                           <AlertIcon variant="warning"><AlertTriangle /></AlertIcon>
