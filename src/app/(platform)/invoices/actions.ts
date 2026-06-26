@@ -10,6 +10,7 @@ import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { parseDefaultTaxRate } from '@/lib/tax'
 import { buildFreshInvoicePdf, invalidateInvoicePdf } from '@/lib/pdf/serve-invoice-pdf'
 import { buildSwedishCompany } from '@/lib/pdf/invoice-pdf-context'
+import { invoiceNumberForOrder } from '@/lib/invoice-number'
 
 export async function createInvoice(input: InvoiceInput) {
   const auth = await requireWriteAccess()
@@ -29,10 +30,29 @@ export async function createInvoice(input: InvoiceInput) {
   const taxAmount = Math.round(subtotal * invoiceData.tax_rate) / 100
   const total = subtotal + taxAmount
 
-  // Generate invoice number
-  const { data: invoiceNumber, error: seqError } = await supabase
-    .rpc('next_sequence_number', { p_type: 'invoice', p_prefix: 'INV' })
-  if (seqError) return { error: seqError.message }
+  let invoiceNumber: string
+
+  if (invoiceData.order_id) {
+    const { data: existingForOrder } = await supabase
+      .from('invoices')
+      .select('id')
+      .eq('order_id', invoiceData.order_id)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (existingForOrder) {
+      return { error: 'This sale already has an invoice' }
+    }
+
+    const resolved = await invoiceNumberForOrder(supabase, invoiceData.order_id)
+    if ('error' in resolved) return resolved
+    invoiceNumber = resolved.number
+  } else {
+    const { data: generated, error: seqError } = await supabase
+      .rpc('next_sequence_number', { p_type: 'invoice', p_prefix: 'INV' })
+    if (seqError) return { error: seqError.message }
+    invoiceNumber = generated
+  }
 
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')

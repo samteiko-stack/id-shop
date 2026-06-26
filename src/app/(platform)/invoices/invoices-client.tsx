@@ -152,7 +152,7 @@ export function InvoicesClient({ initialInvoices, customers, fromOrder, defaultT
       onConfirm: () => {
         startTransition(async () => {
           const r = await sendInvoiceEmail(invoiceId)
-          if (r.error) { toast.error(r.error); return }
+          if ('error' in r) { toast.error(r.error); return }
           toast.success('Invoice emailed')
           router.refresh()
         })
@@ -173,7 +173,7 @@ export function InvoicesClient({ initialInvoices, customers, fromOrder, defaultT
         notes: notes || null,
         items: items.filter((i) => i.description && i.quantity > 0),
       })
-      if (r.error) { toast.error(r.error); return }
+      if ('error' in r) { toast.error(r.error); return }
       toast.success(`Invoice ${r.data?.invoiceNumber} created`)
       setDialogOpen(false)
       router.push(`/invoices/${r.data?.invoiceId}`)

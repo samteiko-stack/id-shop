@@ -14,6 +14,7 @@ import { getOrderArchiveBlockers } from '@/lib/platform/archive-guards'
 import { parseDefaultTaxRate } from '@/lib/tax'
 import { invalidateInvoicePdf } from '@/lib/pdf/serve-invoice-pdf'
 import { mergeOrderLineItems, toUserError } from '@/lib/user-error-message'
+import { ensureInvoiceMatchesOrderNumber, invoiceNumberForOrder } from '@/lib/invoice-number'
 import type { OrderStatus } from '@/types'
 
 function actionError(error: unknown, fallback?: string) {
@@ -289,6 +290,9 @@ export async function createInvoiceFromOrder(orderId: string) {
       const reactivated = await reactivateCancelledInvoice(supabase, existing.id, existing.invoice_number)
       if ('error' in reactivated && reactivated.error) return { error: reactivated.error }
 
+      const synced = await ensureInvoiceMatchesOrderNumber(supabase, existing.id, orderId)
+      if ('error' in synced) return synced
+
       revalidatePath(`/orders/${orderId}`)
       revalidatePath('/orders')
       revalidatePath('/invoices')
@@ -298,18 +302,27 @@ export async function createInvoiceFromOrder(orderId: string) {
       return {
         data: {
           invoiceId: existing.id,
-          invoiceNumber: existing.invoice_number,
+          invoiceNumber: synced.invoiceNumber,
           reactivated: true,
         },
       }
     }
 
-    return { data: { invoiceId: existing.id, invoiceNumber: existing.invoice_number, alreadyExists: true } }
+    const synced = await ensureInvoiceMatchesOrderNumber(supabase, existing.id, orderId)
+    if ('error' in synced) return synced
+
+    return {
+      data: {
+        invoiceId: existing.id,
+        invoiceNumber: synced.invoiceNumber,
+        alreadyExists: true,
+      },
+    }
   }
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, customer_id, status, created_at, discount_rate, discount_amount, extra_discount_rate, extra_discount_amount, items:order_items(product_id, quantity, unit_price, product:products(name, ref))')
+    .select('id, order_number, customer_id, status, created_at, discount_rate, discount_amount, extra_discount_rate, extra_discount_amount, items:order_items(product_id, quantity, unit_price, product:products(name, ref))')
     .eq('id', orderId)
     .is('deleted_at', null)
     .single()
@@ -341,6 +354,9 @@ export async function createInvoiceFromOrder(orderId: string) {
       )
       if ('error' in reactivated && reactivated.error) return { error: reactivated.error }
 
+      const synced = await ensureInvoiceMatchesOrderNumber(supabase, linkedInvoice.id, orderId)
+      if ('error' in synced) return synced
+
       revalidatePath(`/orders/${orderId}`)
       revalidatePath('/orders')
       revalidatePath('/invoices')
@@ -350,16 +366,19 @@ export async function createInvoiceFromOrder(orderId: string) {
       return {
         data: {
           invoiceId: linkedInvoice.id,
-          invoiceNumber: linkedInvoice.invoice_number,
+          invoiceNumber: synced.invoiceNumber,
           reactivated: true,
         },
       }
     }
 
+    const synced = await ensureInvoiceMatchesOrderNumber(supabase, linked[0].id, orderId)
+    if ('error' in synced) return synced
+
     return {
       data: {
         invoiceId: linked[0].id,
-        invoiceNumber: linked[0].invoice_number,
+        invoiceNumber: synced.invoiceNumber,
         alreadyExists: true,
         wasLinked: true,
       },
@@ -386,9 +405,9 @@ export async function createInvoiceFromOrder(orderId: string) {
   const taxAmount = Math.round(taxableSubtotal * taxRate) / 100
   const issueDate = new Date().toISOString().split('T')[0]
 
-  const { data: invoiceNumber, error: seqError } = await supabase
-    .rpc('next_sequence_number', { p_type: 'invoice', p_prefix: 'INV' })
-  if (seqError) return actionError(seqError)
+  const invoiceNumberResult = await invoiceNumberForOrder(supabase, orderId)
+  if ('error' in invoiceNumberResult) return invoiceNumberResult
+  const invoiceNumber = invoiceNumberResult.number
 
   const { data: invoice, error: invoiceError } = await supabase
     .from('invoices')
