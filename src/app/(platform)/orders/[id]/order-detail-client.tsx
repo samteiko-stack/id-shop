@@ -211,7 +211,6 @@ export function OrderDetailClient({
     order.status === 'fulfilled' &&
     (!primaryInvoice ||
       (primaryInvoice.status !== 'paid' &&
-        primaryInvoice.status !== 'cancelled' &&
         primaryInvoice.settlement.paid === 0 &&
         primaryInvoice.credits.length === 0))
   const hasOverflowActions =
