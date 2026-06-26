@@ -6,6 +6,7 @@ import { writeAuditLog } from '@/lib/audit'
 import { requireWriteAccess } from '@/lib/auth/permissions'
 import { revalidateDashboard } from '@/lib/platform/revalidate-platform'
 import { sanitizePostgrestSearch } from '@/lib/supabase/sanitize-search'
+import { z } from 'zod'
 
 export async function assignBatchToOrderItem(input: {
   product_id: string
@@ -78,6 +79,130 @@ export async function assignBatchToOrderItem(input: {
   revalidateDashboard()
 
   return { data: { batchId } }
+}
+
+export async function removeTraceAssignment(assignmentId: string) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const supabase = await createClient()
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('order_item_batches')
+    .select(`
+      id, order_item_id, quantity,
+      batch:product_batches(id, ref, lot_number, expiry_date)
+    `)
+    .eq('id', assignmentId)
+    .maybeSingle()
+
+  if (fetchError) return { error: fetchError.message }
+  if (!existing) return { error: 'Trace assignment not found' }
+
+  const { error: deleteError } = await supabase
+    .from('order_item_batches')
+    .delete()
+    .eq('id', assignmentId)
+
+  if (deleteError) return { error: deleteError.message }
+
+  await writeAuditLog({
+    tableName: 'order_item_batches',
+    recordId: assignmentId,
+    action: 'DELETE',
+    oldData: existing,
+  })
+
+  revalidateDashboard()
+  return { data: { removed: true } }
+}
+
+export async function correctTraceAssignment(input: {
+  assignment_id: string
+  order_item_id: string
+  product_id: string
+  ref: string
+  lot_number: string
+  expiry_date: string
+  quantity: number
+}) {
+  const auth = await requireWriteAccess()
+  if ('error' in auth) return { error: auth.error }
+
+  const parsed = productBatchSchema
+    .extend({ assignment_id: z.string().uuid() })
+    .safeParse(input)
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+  }
+
+  const {
+    assignment_id,
+    order_item_id,
+    product_id,
+    ref,
+    lot_number,
+    expiry_date,
+    quantity,
+  } = parsed.data
+
+  const supabase = await createClient()
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('order_item_batches')
+    .select(`
+      id, order_item_id, quantity,
+      batch:product_batches(id, ref, lot_number, expiry_date, raw_qr_payload)
+    `)
+    .eq('id', assignment_id)
+    .maybeSingle()
+
+  if (fetchError) return { error: fetchError.message }
+  if (!existing || existing.order_item_id !== order_item_id) {
+    return { error: 'Trace assignment not found' }
+  }
+
+  const oldBatch = existing.batch as {
+    id: string
+    ref: string
+    lot_number: string
+    expiry_date: string
+    raw_qr_payload?: string
+  } | null
+
+  const { error: deleteError } = await supabase
+    .from('order_item_batches')
+    .delete()
+    .eq('id', assignment_id)
+
+  if (deleteError) return { error: deleteError.message }
+
+  await writeAuditLog({
+    tableName: 'order_item_batches',
+    recordId: assignment_id,
+    action: 'DELETE',
+    oldData: existing,
+    newData: { reason: 'trace_correction', corrected_to: { lot_number, ref, expiry_date, quantity } },
+  })
+
+  const correctionPayload = [
+    'CORRECTION',
+    `prev_lot=${oldBatch?.lot_number ?? 'unknown'}`,
+    `prev_ref=${oldBatch?.ref ?? 'unknown'}`,
+    `prev_exp=${oldBatch?.expiry_date ?? 'unknown'}`,
+    `new_lot=${lot_number}`,
+  ].join('|')
+
+  return assignBatchToOrderItem({
+    product_id,
+    order_item_id,
+    ref,
+    lot_number,
+    expiry_date,
+    raw_qr_payload: correctionPayload,
+    quantity,
+  })
 }
 
 const BATCH_SEARCH_SELECT = `

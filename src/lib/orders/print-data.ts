@@ -1,10 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { OrderLineItem } from '@/lib/discounts'
 import { getCustomerFacingLineItems } from '@/lib/discounts'
+import {
+  attachLotNumbersByOrderItemId,
+  lotNumbersByOrderItemId,
+} from '@/lib/pdf/invoice-pdf-context'
 
 type PrintOrderLineItem = OrderLineItem & {
   id: string
   product?: { name?: string; ref?: string } | null
+  batches?: Array<{
+    quantity?: number
+    batch?: { lot_number?: string | null; expiry_date?: string | null } | null
+  }> | null
 }
 
 export async function getOrderForPrint(supabase: SupabaseClient, id: string) {
@@ -15,7 +23,11 @@ export async function getOrderForPrint(supabase: SupabaseClient, id: string) {
       customer:customers(*),
       items:order_items(
         *,
-        product:products(id, name, ref, unit_price)
+        product:products(id, name, ref, unit_price),
+        batches:order_item_batches(
+          quantity,
+          batch:product_batches(lot_number, expiry_date)
+        )
       )
     `)
     .eq('id', id)
@@ -30,7 +42,7 @@ export async function getOrderForPrint(supabase: SupabaseClient, id: string) {
     extra_discount_amount?: number
     order_tax?: number
     shipping?: number
-    items?: unknown[]
+    items?: PrintOrderLineItem[]
     order_number: string
     created_at: string
     customer?: { name?: string }
@@ -46,7 +58,11 @@ export async function getOrderForPrint(supabase: SupabaseClient, id: string) {
   const discountRate = Number(o.discount_rate ?? 0)
   const extraDiscountRate = Number(o.extra_discount_rate ?? 0)
   const extraDiscountAmount = Number(o.extra_discount_amount ?? 0)
-  const facingItems = getCustomerFacingLineItems((o.items ?? []) as PrintOrderLineItem[], discountRate)
+  const lotMap = lotNumbersByOrderItemId(o.items ?? [])
+  const facingItems = attachLotNumbersByOrderItemId(
+    getCustomerFacingLineItems(o.items ?? [], discountRate),
+    lotMap,
+  )
   const netSubtotal = facingItems.reduce((sum, item) => sum + item.net_line_total, 0)
   const tax = Number(o.order_tax ?? 0)
   const shipping = Number(o.shipping ?? 0)

@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { ActionsMenu } from '@/components/ui/actions-menu'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
 import { getCustomerFacingLineItems } from '@/lib/discounts'
+import { attachLotNumbersFromOrder } from '@/lib/pdf/invoice-pdf-context'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { ArrowLeft, Send, CheckCircle2, FileMinus, FileText, Loader2, MoreVertical, XCircle } from '@/components/icons'
@@ -49,7 +50,10 @@ export function InvoiceDetailClient({
   const discountRate = Number((invoice as any).discount_rate ?? 0)
   const extraDiscountRate = Number((invoice as any).extra_discount_rate ?? 0)
   const extraDiscountAmount = Number((invoice as any).extra_discount_amount ?? 0)
-  const facingItems = getCustomerFacingLineItems(invoice.items ?? [], discountRate)
+  const facingItems = attachLotNumbersFromOrder(
+    getCustomerFacingLineItems(invoice.items ?? [], discountRate),
+    invoice.order?.items ?? [],
+  )
   const netSubtotal = facingItems.reduce((sum, item) => sum + item.net_line_total, 0)
   const isCancelled = invoice.status === 'cancelled'
   const displayStatus = isCancelled ? 'cancelled' : (paymentSummary?.status ?? 'unpaid')
@@ -203,15 +207,17 @@ export function InvoiceDetailClient({
         <CardHeader><CardTitle className="text-base">Line Items</CardTitle></CardHeader>
         <CardContent className="p-0">
           <div>
-            <div className="grid grid-cols-[1fr_80px_120px_120px] px-6 py-3 bg-[var(--table-header-bg)] text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide border-b border-border">
+            <div className="grid grid-cols-[1fr_120px_80px_120px_120px] px-6 py-3 bg-[var(--table-header-bg)] text-xs font-semibold text-[var(--table-header-fg)] uppercase tracking-wide border-b border-border">
               <span>Description</span>
+              <span>Lot No.</span>
               <span className="text-right">Qty</span>
               <span className="text-right">Unit Price</span>
               <span className="text-right">Total</span>
             </div>
             {facingItems.map((item: any) => (
-              <div key={item.id} className="grid grid-cols-[1fr_80px_120px_120px] px-6 py-4 border-b border-border last:border-0 items-center">
+              <div key={item.id} className="grid grid-cols-[1fr_120px_80px_120px_120px] px-6 py-4 border-b border-border last:border-0 items-center">
                 <span className="text-sm text-foreground">{item.description}</span>
+                <span className="text-sm font-mono text-muted-foreground">{item.lot_numbers || '—'}</span>
                 <span className="text-sm text-muted-foreground text-right">{item.quantity}</span>
                 <span className="text-sm text-foreground text-right">{formatCurrency(item.net_unit_price, invoice.currency)}</span>
                 <span className="text-sm font-semibold text-foreground text-right">{formatCurrency(item.net_line_total, invoice.currency)}</span>

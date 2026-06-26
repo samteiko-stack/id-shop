@@ -14,14 +14,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { formatDate, formatDateTime } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, QrCode, Package, User, AlertTriangle, CheckCircle2, ChevronRight } from '@/components/icons'
+import { Search, QrCode, Package, User, AlertTriangle, CheckCircle2, ChevronRight, Pencil, Trash2 } from '@/components/icons'
 import { Alert, AlertIcon } from '@/components/ui/alert'
 import Link from 'next/link'
-import { assignBatchToOrderItem, searchTraceability } from './actions'
+import { assignBatchToOrderItem, correctTraceAssignment, removeTraceAssignment, searchTraceability } from './actions'
 import { cn } from '@/lib/utils'
 
 function formatOrderLabel(order: { order_number?: string; customer?: { name?: string } | null; created_at?: string }) {
@@ -34,6 +35,8 @@ type TraceAssignment = {
   id: string
   quantity: number
   created_at?: string
+  order_item_id?: string
+  product_id?: string
   batch?: {
     id: string
     ref: string
@@ -52,7 +55,7 @@ interface Props {
 
 export function TraceabilityClient({ openOrders, initialOrderId, initialSearch = '' }: Props) {
   const router = useRouter()
-  const { canScanQR } = useRole()
+  const { canScanQR, canWrite } = useRole()
   const [activeTab, setActiveTab] = useState<string>('search')
   useEffect(() => { setActiveTab(canScanQR ? 'scan' : 'search') }, [canScanQR])
   const [selectedOrderId, setSelectedOrderId] = useState(initialOrderId ?? '')
@@ -65,6 +68,12 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
   const [confirmQuantity, setConfirmQuantity] = useState(1)
   const [isPending, startTransition] = useTransition()
   const [selectedTrace, setSelectedTrace] = useState<TraceAssignment | null>(null)
+  const [traceEditMode, setTraceEditMode] = useState(false)
+  const [editLot, setEditLot] = useState('')
+  const [editRef, setEditRef] = useState('')
+  const [editExpiry, setEditExpiry] = useState('')
+  const [editQuantity, setEditQuantity] = useState(1)
+  const [removeTraceOpen, setRemoveTraceOpen] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
 
   // Search state
@@ -142,8 +151,67 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
     setSearchResults(result.data ?? [])
   }
 
-  function openTraceDetail(assignment: TraceAssignment) {
-    setSelectedTrace(assignment)
+  function openTraceDetail(
+    assignment: TraceAssignment,
+    context?: { order_item_id: string; product_id: string },
+  ) {
+    setSelectedTrace({
+      ...assignment,
+      order_item_id: context?.order_item_id ?? assignment.order_item_id,
+      product_id: context?.product_id ?? assignment.product_id,
+    })
+    setTraceEditMode(false)
+    setEditLot(assignment.batch?.lot_number ?? '')
+    setEditRef(assignment.batch?.ref ?? '')
+    setEditExpiry(assignment.batch?.expiry_date ?? '')
+    setEditQuantity(assignment.quantity)
+  }
+
+  function closeTraceDetail() {
+    setSelectedTrace(null)
+    setTraceEditMode(false)
+    setRemoveTraceOpen(false)
+  }
+
+  function handleCorrectTrace() {
+    if (!selectedTrace?.order_item_id || !selectedTrace.product_id) {
+      toast.error('Cannot correct this trace from here. Open it from the order item list.')
+      return
+    }
+    const lotNumber = editLot.trim()
+    if (!lotNumber || !editRef.trim() || !editExpiry) {
+      toast.error('LOT, REF, and expiry are all required.')
+      return
+    }
+
+    startTransition(async () => {
+      const result = await correctTraceAssignment({
+        assignment_id: selectedTrace.id,
+        order_item_id: selectedTrace.order_item_id!,
+        product_id: selectedTrace.product_id!,
+        ref: editRef.trim(),
+        lot_number: lotNumber,
+        expiry_date: editExpiry,
+        quantity: editQuantity,
+      })
+
+      if (result.error) { toast.error(result.error); return }
+      toast.success(`Trace corrected to LOT ${lotNumber}`)
+      closeTraceDetail()
+      router.refresh()
+    })
+  }
+
+  function handleRemoveTrace() {
+    if (!selectedTrace) return
+
+    startTransition(async () => {
+      const result = await removeTraceAssignment(selectedTrace.id)
+      if (result.error) { toast.error(result.error); return }
+      toast.success('Trace assignment removed')
+      closeTraceDetail()
+      router.refresh()
+    })
   }
 
   return (
@@ -241,7 +309,10 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                                   <button
                                     key={assignment.id}
                                     type="button"
-                                    onClick={() => openTraceDetail(assignment)}
+                                    onClick={() => openTraceDetail(assignment, {
+                                      order_item_id: item.id,
+                                      product_id: item.product_id,
+                                    })}
                                     className="flex w-full items-center justify-between gap-2 rounded-md border border-success/30 bg-[var(--scan-success-bg)] px-3 py-2 text-left text-xs transition-colors hover:border-success hover:bg-success/10"
                                   >
                                     <div>
@@ -451,56 +522,128 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
         </TabsContent>
       </Tabs>
 
-      <Dialog open={!!selectedTrace} onOpenChange={(open) => { if (!open) setSelectedTrace(null) }}>
+      <Dialog open={!!selectedTrace} onOpenChange={(open) => { if (!open) closeTraceDetail() }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-success" />
-              Trace record
+              {traceEditMode ? 'Correct trace' : 'Trace record'}
             </DialogTitle>
             <DialogDescription>
-              This assignment is permanent for regulatory traceability.
+              {traceEditMode
+                ? 'Update the LOT, REF, expiry, or quantity. The old assignment is logged and replaced.'
+                : canWrite
+                ? 'Click Correct if the wrong LOT was entered. Changes are logged for audit.'
+                : 'View-only trace details.'}
             </DialogDescription>
           </DialogHeader>
 
           {selectedTrace?.batch && (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm">
-              <dt className="text-muted-foreground">LOT</dt>
-              <dd className="font-mono font-semibold">{selectedTrace.batch.lot_number}</dd>
+            traceEditMode ? (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">LOT number *</Label>
+                  <Input value={editLot} onChange={(e) => setEditLot(e.target.value)} className="font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">REF *</Label>
+                  <Input value={editRef} onChange={(e) => setEditRef(e.target.value)} className="font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Expiry date *</Label>
+                  <Input type="date" value={editExpiry} onChange={(e) => setEditExpiry(e.target.value)} className="font-mono" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Quantity *</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={editQuantity}
+                    onChange={(e) => setEditQuantity(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-3 text-sm">
+                <dt className="text-muted-foreground">LOT</dt>
+                <dd className="font-mono font-semibold">{selectedTrace.batch.lot_number}</dd>
 
-              <dt className="text-muted-foreground">REF</dt>
-              <dd className="font-mono font-semibold">{selectedTrace.batch.ref}</dd>
+                <dt className="text-muted-foreground">REF</dt>
+                <dd className="font-mono font-semibold">{selectedTrace.batch.ref}</dd>
 
-              <dt className="text-muted-foreground">Expiry</dt>
-              <dd className="font-mono">{formatDate(selectedTrace.batch.expiry_date)}</dd>
+                <dt className="text-muted-foreground">Expiry</dt>
+                <dd className="font-mono">{formatDate(selectedTrace.batch.expiry_date)}</dd>
 
-              <dt className="text-muted-foreground">Quantity</dt>
-              <dd>{selectedTrace.quantity}</dd>
+                <dt className="text-muted-foreground">Quantity</dt>
+                <dd>{selectedTrace.quantity}</dd>
 
-              {selectedTrace.batch.scanned_at && (
+                {selectedTrace.batch.scanned_at && (
+                  <>
+                    <dt className="text-muted-foreground">Scanned</dt>
+                    <dd>{formatDateTime(selectedTrace.batch.scanned_at)}</dd>
+                  </>
+                )}
+
+                {selectedTrace.created_at && (
+                  <>
+                    <dt className="text-muted-foreground">Assigned</dt>
+                    <dd>{formatDateTime(selectedTrace.created_at)}</dd>
+                  </>
+                )}
+
+                {selectedTrace.batch.raw_qr_payload && (
+                  <>
+                    <dt className="text-muted-foreground">Raw scan</dt>
+                    <dd className="font-mono text-xs break-all">{selectedTrace.batch.raw_qr_payload}</dd>
+                  </>
+                )}
+              </dl>
+            )
+          )}
+
+          {canWrite && selectedTrace?.order_item_id && selectedTrace.product_id && (
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {traceEditMode ? (
                 <>
-                  <dt className="text-muted-foreground">Scanned</dt>
-                  <dd>{formatDateTime(selectedTrace.batch.scanned_at)}</dd>
+                  <Button variant="outline" onClick={() => setTraceEditMode(false)} disabled={isPending}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCorrectTrace} disabled={isPending || !editLot.trim() || !editExpiry}>
+                    Save correction
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setRemoveTraceOpen(true)}
+                    disabled={isPending}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Remove
+                  </Button>
+                  <Button onClick={() => setTraceEditMode(true)} disabled={isPending}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Correct LOT
+                  </Button>
                 </>
               )}
-
-              {selectedTrace.created_at && (
-                <>
-                  <dt className="text-muted-foreground">Assigned</dt>
-                  <dd>{formatDateTime(selectedTrace.created_at)}</dd>
-                </>
-              )}
-
-              {selectedTrace.batch.raw_qr_payload && (
-                <>
-                  <dt className="text-muted-foreground">Raw scan</dt>
-                  <dd className="font-mono text-xs break-all">{selectedTrace.batch.raw_qr_payload}</dd>
-                </>
-              )}
-            </dl>
+            </DialogFooter>
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={removeTraceOpen}
+        onOpenChange={setRemoveTraceOpen}
+        title="Remove this trace?"
+        description="The LOT assignment will be removed from this order line. You can scan and assign again with the correct LOT."
+        confirmLabel="Remove trace"
+        variant="destructive"
+        onConfirm={handleRemoveTrace}
+        loading={isPending}
+      />
     </div>
   )
 }

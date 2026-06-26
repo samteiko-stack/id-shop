@@ -5,6 +5,7 @@ type FacingItem = {
   quantity: number
   net_unit_price: number
   net_line_total: number
+  lot_numbers?: string
   product?: { name?: string; ref?: string } | null
 }
 
@@ -123,6 +124,7 @@ export function OrderPrintDocument({
             <tr>
               <th className="w-10 px-4 py-3 text-left text-xs font-semibold text-muted-foreground">No</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Code / Description</th>
+              <th className="w-36 px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Lot No.</th>
               <th className="w-20 px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Qty</th>
               <th className="w-28 px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Unit Price</th>
               <th className="w-28 px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Subtotal</th>
@@ -136,6 +138,7 @@ export function OrderPrintDocument({
                   <p className="font-medium">{item.product?.name}</p>
                   <p className="font-mono text-xs text-muted-foreground">REF: {item.product?.ref}</p>
                 </td>
+                <td className="px-4 py-3 font-mono text-xs">{item.lot_numbers || '—'}</td>
                 <td className="px-4 py-3 text-right">{item.quantity}</td>
                 <td className="px-4 py-3 text-right">{formatCurrency(item.net_unit_price)}</td>
                 <td className="px-4 py-3 text-right font-medium">{formatCurrency(item.net_line_total)}</td>
@@ -143,7 +146,7 @@ export function OrderPrintDocument({
             ))}
             {facingItems.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No items on this order.
                 </td>
               </tr>

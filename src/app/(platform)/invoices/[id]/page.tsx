@@ -26,7 +26,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   const { data: invoice } = await supabase
     .from('invoices')
-    .select('*, customer:customers(*), items:invoice_items(*, product:products(name, ref)), order:orders(id, order_number)')
+    .select('*, customer:customers(*), items:invoice_items(*, product:products(name, ref)), order:orders(id, order_number, items:order_items(id, product_id, batches:order_item_batches(quantity, batch:product_batches(lot_number, expiry_date))))')
     .eq('id', id)
     .is('deleted_at', null)
     .single()

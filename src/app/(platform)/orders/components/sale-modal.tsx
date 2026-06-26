@@ -33,6 +33,7 @@ import type { Order, Customer, Product, OrderStatus } from '@/types'
 import { useRole } from '@/hooks/use-role'
 import { updateOrder, archiveOrder, getOrderArchiveHints } from '../actions'
 import { formatArchiveWarnings } from '@/lib/platform/archive-guards'
+import { formatLotNumbersFromBatches } from '@/lib/pdf/invoice-pdf-context'
 
 interface SaleModalProps {
   open: boolean
@@ -120,7 +121,11 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
           customer:customers(*),
           items:order_items(
             *,
-            product:products(*)
+            product:products(*),
+            batches:order_item_batches(
+              quantity,
+              batch:product_batches(lot_number, expiry_date)
+            )
           )
         `)
         .eq('id', orderId)
@@ -420,6 +425,9 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
                     <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
                       Code / Description
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
+                      Lot No.
+                    </th>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">
                       Quantity
                     </th>
@@ -438,6 +446,9 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
                       <td className="px-4 py-3">
                         <p className="text-sm font-medium text-foreground">{item.product?.name}</p>
                         <p className="text-xs text-muted-foreground font-mono">REF: {item.product?.ref}</p>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-foreground">
+                        {formatLotNumbersFromBatches((item as any).batches) || '—'}
                       </td>
                       <td className="px-4 py-3 text-right text-sm">{item.quantity}</td>
                       <td className="px-4 py-3 text-right text-sm">{formatCurrency(item.unit_price)}</td>

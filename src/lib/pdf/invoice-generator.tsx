@@ -12,9 +12,8 @@ import type { Invoice } from '@/types'
 import { getCustomerFacingLineItems } from '@/lib/discounts'
 import type { InvoiceSettlement } from '@/lib/invoice-settlement'
 import {
-  attachLotNumbersToItems,
+  attachLotNumbersFromOrder,
   formatLineDescription,
-  lotNumbersByProductId,
   paymentStatusLabel,
   SUPPLIER_LOGO,
   type InvoiceCompanySettings,
@@ -236,8 +235,10 @@ function FakturaDocument({ invoice, company, settlement }: GenerateInvoicePDFOpt
   const extraDiscountRate = Number((invoice as any).extra_discount_rate ?? 0)
   const extraDiscountAmount = Number((invoice as any).extra_discount_amount ?? 0)
 
-  const lotMap = lotNumbersByProductId(invoice.order?.items ?? [])
-  const itemsWithLots = attachLotNumbersToItems(invoice.items ?? [], lotMap)
+  const itemsWithLots = attachLotNumbersFromOrder(
+    invoice.items ?? [],
+    invoice.order?.items ?? [],
+  )
   const facingItems = getCustomerFacingLineItems(itemsWithLots, discountRate)
   const netSubtotal = facingItems.reduce((sum, item) => sum + item.net_line_total, 0)
   const taxableSubtotal = Math.max(0, netSubtotal - extraDiscountAmount)
