@@ -90,7 +90,7 @@ export function EditOrderClient({ order, customers, products }: Props) {
         items: validItems,
         extra_discount_rate: parseFloat(extraDiscountRate) || 0,
       })
-      if (result.error) { toast.error(result.error); return }
+      if ('error' in result) { toast.error(result.error); return }
       toast.success('Order updated')
       router.push(`/orders/${order.id}`)
     })

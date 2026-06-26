@@ -237,7 +237,7 @@ export function SaleModal({ open, onOpenChange, orderId, mode: initialMode = 'vi
       if (!confirm(message)) return
 
       const result = await archiveOrder(orderId!)
-      if (result.error) {
+      if ('error' in result && result.error) {
         toast.error(result.error)
         return
       }

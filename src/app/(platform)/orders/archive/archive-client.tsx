@@ -90,7 +90,7 @@ export function ArchiveOrdersClient({ initialOrders, customers, pagination }: Pr
       const errors: string[] = []
       for (const id of ids) {
         const result = await restoreOrder(id)
-        if (result.error) errors.push(result.error)
+        if ('error' in result && result.error) errors.push(result.error)
       }
       if (errors.length > 0) {
         toast.error(errors[0] ?? 'Failed to restore sales')
@@ -108,7 +108,7 @@ export function ArchiveOrdersClient({ initialOrders, customers, pagination }: Pr
       const errors: string[] = []
       for (const id of ids) {
         const result = await permanentDeleteOrder(id)
-        if (result.error) errors.push(result.error)
+        if ('error' in result && result.error) errors.push(result.error)
       }
       if (errors.length > 0) {
         toast.error(errors[0] ?? 'Failed to delete sales')

@@ -24,7 +24,7 @@ async function reactivateCancelledInvoice(
   supabase: Awaited<ReturnType<typeof createClient>>,
   invoiceId: string,
   invoiceNumber: string,
-) {
+): Promise<{ error?: string }> {
   const [{ count: paymentCount }, { count: creditCount }] = await Promise.all([
     supabase.from('payments').select('id', { count: 'exact', head: true }).eq('invoice_id', invoiceId),
     supabase
@@ -287,7 +287,7 @@ export async function createInvoiceFromOrder(orderId: string) {
   if (existing) {
     if (existing.status === 'cancelled') {
       const reactivated = await reactivateCancelledInvoice(supabase, existing.id, existing.invoice_number)
-      if (reactivated.error) return { error: reactivated.error }
+      if ('error' in reactivated && reactivated.error) return { error: reactivated.error }
 
       revalidatePath(`/orders/${orderId}`)
       revalidatePath('/orders')
@@ -339,7 +339,7 @@ export async function createInvoiceFromOrder(orderId: string) {
         linkedInvoice.id,
         linkedInvoice.invoice_number,
       )
-      if (reactivated.error) return { error: reactivated.error }
+      if ('error' in reactivated && reactivated.error) return { error: reactivated.error }
 
       revalidatePath(`/orders/${orderId}`)
       revalidatePath('/orders')
@@ -547,7 +547,7 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
 
   if (status === 'fulfilled') {
     const invoiceResult = await createInvoiceFromOrder(orderId)
-    if (invoiceResult.error) return { error: invoiceResult.error }
+    if ('error' in invoiceResult) return { error: invoiceResult.error }
     revalidatePath(`/orders/${orderId}`)
     revalidatePath('/orders')
     revalidateDashboard()
@@ -570,7 +570,7 @@ export async function getOrderArchiveHints(orderId: string) {
   return { warnings: result.warnings ?? [] }
 }
 
-export async function archiveOrder(orderId: string) {
+export async function archiveOrder(orderId: string): Promise<{ error?: string }> {
   const auth = await requireWriteAccess()
   if ('error' in auth) return { error: auth.error }
 
@@ -607,7 +607,7 @@ export async function softDeleteOrder(orderId: string) {
   return archiveOrder(orderId)
 }
 
-export async function restoreOrder(orderId: string) {
+export async function restoreOrder(orderId: string): Promise<{ error?: string }> {
   const auth = await requireWriteAccess()
   if ('error' in auth) return { error: auth.error }
 
@@ -636,7 +636,9 @@ export async function restoreOrder(orderId: string) {
   return {}
 }
 
-export async function permanentDeleteOrder(orderId: string) {
+export async function permanentDeleteOrder(
+  orderId: string,
+): Promise<{ error?: string }> {
   const auth = await requireAdminAccess()
   if ('error' in auth) return { error: auth.error }
 

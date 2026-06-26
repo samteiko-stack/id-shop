@@ -42,7 +42,7 @@ export function ReorderOrderButton({
   function handleConfirm() {
     startTransition(async () => {
       const result = await reorderOrder(orderId)
-      if (result.error) {
+      if ('error' in result) {
         toast.error(result.error)
         return
       }

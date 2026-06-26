@@ -64,7 +64,7 @@ export function CartClient({
   function handleUpdate(itemId: string, qty: number) {
     startTransition(async () => {
       const result = await updateCartItem(itemId, qty)
-      if (result.error) toast.error(result.error)
+      if ('error' in result) toast.error(result.error)
       else router.refresh()
     })
   }
@@ -72,7 +72,7 @@ export function CartClient({
   function handleConfirmedSubmit() {
     startTransition(async () => {
       const result = await submitCart()
-      if (result.error) {
+      if ('error' in result) {
         toast.error(result.error)
       } else {
         setSubmittedOrderNumber(result.orderNumber ?? draftOrder?.order_number ?? '')

@@ -46,7 +46,7 @@ export function ShopProductClient({ product, related, isLoggedIn, isApproved, di
     if (!isApproved) { toast.error('Ditt konto väntar på godkännande.'); return }
     startTransition(async () => {
       const result = await addToCart(product.id, qty)
-      if (result.error) toast.error(result.error)
+      if ('error' in result) toast.error(result.error)
       else {
         showAddedToCartToast(product.name, qty)
         router.refresh()

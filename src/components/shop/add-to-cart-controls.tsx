@@ -25,7 +25,7 @@ export function AddToCartControls({ productId, productName, disabled = false, cl
   function handleAdd() {
     startTransition(async () => {
       const res = await addToCart(productId, qty)
-      if (res?.error) {
+      if ('error' in res) {
         toast.error(res.error)
         return
       }

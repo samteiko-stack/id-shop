@@ -104,7 +104,7 @@ export function ArchiveClient({ type, types, rows, customers, pagination }: Prop
   function runRestore(ids: string[]) {
     startTransition(async () => {
       const result = await restoreArchivedItems(type, ids)
-      if (result.error) {
+      if ('error' in result && result.error) {
         toast.error(result.error)
       } else {
         toast.success(`Restored ${ids.length} item(s)`)
@@ -120,7 +120,7 @@ export function ArchiveClient({ type, types, rows, customers, pagination }: Prop
       const errors: string[] = []
       for (const id of ids) {
         const result = await permanentDeleteOrder(id)
-        if (result.error) errors.push(result.error)
+        if ('error' in result && result.error) errors.push(result.error)
       }
       if (errors.length > 0) {
         toast.error(errors[0] ?? 'Failed to delete sales')

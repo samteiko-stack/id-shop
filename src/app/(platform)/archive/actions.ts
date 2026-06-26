@@ -71,7 +71,10 @@ export async function restoreArchivedItem(type: ArchiveType, id: string) {
   return result
 }
 
-export async function restoreArchivedItems(type: ArchiveType, ids: string[]) {
+export async function restoreArchivedItems(
+  type: ArchiveType,
+  ids: string[],
+): Promise<{ error?: string }> {
   const errors: string[] = []
   for (const id of ids) {
     const result = await restoreArchivedItem(type, id)

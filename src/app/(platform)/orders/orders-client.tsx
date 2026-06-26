@@ -73,7 +73,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
   function handleDuplicate(orderId: string, e: React.MouseEvent) {
     e.stopPropagation()
     duplicateOrder(orderId).then((res) => {
-      if (res.error) { toast.error(res.error); return }
+      if ('error' in res) { toast.error(res.error); return }
       toast.success(`Order duplicated: ${res.data?.orderNumber}`)
       router.push(`/orders/${res.data?.orderId}`)
     })
@@ -143,7 +143,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
       
       for (const id of ids) {
         const r = await duplicateOrder(id)
-        if (r.error) errors.push(`${id}: ${r.error}`)
+        if ('error' in r) errors.push(`${id}: ${r.error}`)
       }
       
       if (errors.length > 0) {
@@ -178,7 +178,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
       const errors: string[] = []
       for (const id of ids) {
         const result = await archiveOrder(id)
-        if (result.error) errors.push(result.error)
+        if ('error' in result && result.error) errors.push(result.error)
       }
       if (errors.length > 0) {
         toast.error(errors[0] ?? 'Failed to archive sales')
@@ -343,7 +343,7 @@ export function OrdersClient({ initialOrders, customers, pagination, unreadOrder
                     e.stopPropagation()
                     startTransition(async () => {
                       const result = await createInvoiceFromOrder(o.id)
-                      if (result.error) { toast.error(result.error); return }
+                      if ('error' in result) { toast.error(result.error); return }
                       toast.success(`Invoice ${result.data?.invoiceNumber} created`)
                       router.refresh()
                     })

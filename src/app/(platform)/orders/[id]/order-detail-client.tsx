@@ -104,7 +104,7 @@ export function OrderDetailClient({
       onConfirm: () => {
         startTransition(async () => {
           const result = await updateOrderStatus(order.id, status)
-          if (result.error) { toast.error(result.error); return }
+          if ('error' in result) { toast.error(result.error); return }
           const invoiceNumber = (result.data as any)?.invoice?.invoiceNumber
           if (status === 'fulfilled' && invoiceNumber) {
             if ((result.data as any)?.invoice?.reactivated) {
@@ -132,7 +132,7 @@ export function OrderDetailClient({
       onConfirm: () => {
         startTransition(async () => {
           const result = await revertOrderFulfillment(order.id)
-          if (result.error) { toast.error(result.error); return }
+          if ('error' in result) { toast.error(result.error); return }
           toast.success('Sale reverted to confirmed')
           router.refresh()
         })
@@ -149,7 +149,7 @@ export function OrderDetailClient({
       onConfirm: () => {
         startTransition(async () => {
           const result = await duplicateOrder(order.id)
-          if (result.error) { toast.error(result.error); return }
+          if ('error' in result) { toast.error(result.error); return }
           toast.success(`Sale duplicated: ${result.data?.orderNumber}`)
           router.push(`/orders/${result.data?.orderId}`)
         })
@@ -160,7 +160,7 @@ export function OrderDetailClient({
   function handleCreateInvoice() {
     startTransition(async () => {
       const result = await createInvoiceFromOrder(order.id)
-      if (result.error) { toast.error(result.error); return }
+      if ('error' in result) { toast.error(result.error); return }
       if ((result.data as any)?.wasLinked) {
         toast.success(`Invoice ${result.data?.invoiceNumber} linked to this sale`)
       } else if (result.data?.alreadyExists) {
@@ -190,7 +190,7 @@ export function OrderDetailClient({
         onConfirm: () => {
           startTransition(async () => {
             const result = await archiveOrder(order.id)
-            if (result.error) { toast.error(result.error); return }
+            if ('error' in result) { toast.error(result.error); return }
             toast.success('Sale archived')
             router.push('/orders')
           })
