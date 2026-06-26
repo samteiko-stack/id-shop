@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { createPlatformReadClient } from '@/lib/supabase/platform-client'
 import { getCachedCustomerOptions } from '@/lib/platform/cached-reference-data'
 import { ArchiveClient } from './archive-client'
 import {
@@ -22,7 +23,9 @@ async function fetchArchivedRows(
   from: number,
   to: number,
 ): Promise<{ rows: ArchivedRow[]; totalCount: number }> {
-  const supabase = await createClient()
+  const platform = await createPlatformReadClient()
+  if ('error' in platform) return { rows: [], totalCount: 0 }
+  const supabase = platform.supabase
 
   if (type === 'sales') {
     const { data, count } = await supabase

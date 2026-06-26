@@ -179,6 +179,7 @@ async function getOrCreateDraftOrder(
     .eq('customer_id', customerId)
     .eq('status', 'draft')
     .eq('source', 'storefront')
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (existing) {
@@ -360,6 +361,7 @@ export async function submitCart() {
     .eq('customer_id', customer.id)
     .eq('status', 'draft')
     .eq('source', 'storefront')
+    .is('deleted_at', null)
     .maybeSingle()
 
   if (!draftOrder) return { error: 'Your cart is empty.' }
@@ -368,7 +370,7 @@ export async function submitCart() {
   const admin = await createAdminClient()
   const { data: confirmed, error } = await admin
     .from('orders')
-    .update({ status: 'confirmed' })
+    .update({ status: 'confirmed', deleted_at: null })
     .eq('id', draftOrder.id)
     .eq('customer_id', customer.id)
     .eq('status', 'draft')

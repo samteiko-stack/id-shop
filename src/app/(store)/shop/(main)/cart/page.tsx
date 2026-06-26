@@ -37,6 +37,7 @@ export default async function CartPage() {
     .eq('customer_id', customer.id)
     .eq('status', 'draft')
     .eq('source', 'storefront')
+    .is('deleted_at', null)
     .maybeSingle()
 
   const draftOrder = rawOrder ? {

@@ -19,6 +19,7 @@ export async function ShopHeaderServer() {
       .eq('customer_id', auth.customer.id)
       .eq('status', 'draft')
       .eq('source', 'storefront')
+      .is('deleted_at', null)
       .maybeSingle()
     cartCount = draftOrder?.order_items?.length ?? 0
   }
