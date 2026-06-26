@@ -44,14 +44,14 @@ function parseGs1Date(value: string): string | null {
 
 function applyGs1Field(result: ParsedQRPayload, ai: string, value: string): boolean {
   const field = GS1_AI_MAP[ai]
-  if (!field) return false
+  if (field !== 'ref' && field !== 'lot_number' && field !== 'expiry_date') return false
 
   let normalized = value.trim()
   if (ai === '17') {
     normalized = parseGs1Date(normalized) ?? normalized
   }
 
-  ;(result as Record<string, string>)[field] = normalized
+  result[field] = normalized
   return true
 }
 
