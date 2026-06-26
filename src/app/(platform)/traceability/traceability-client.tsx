@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition, useCallback } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRole } from '@/hooks/use-role'
 import { QRScanner, type QRScanResult } from '@/components/qr/qr-scanner'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,12 @@ import { Alert, AlertIcon } from '@/components/ui/alert'
 import Link from 'next/link'
 import { assignBatchToOrderItem, searchTraceability } from './actions'
 
+function formatOrderLabel(order: { order_number?: string; customer?: { name?: string } | null; created_at?: string }) {
+  const customer = (order.customer as { name?: string } | null)?.name ?? 'Unknown customer'
+  const date = order.created_at ? formatDateTime(order.created_at) : ''
+  return date ? `${order.order_number} — ${customer} (${date})` : `${order.order_number} — ${customer}`
+}
+
 interface Props {
   openOrders: any[]
   initialOrderId?: string
@@ -32,6 +38,10 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
   const [selectedOrderId, setSelectedOrderId] = useState(initialOrderId ?? '')
   const [selectedItemId, setSelectedItemId] = useState('')
   const [scanResult, setScanResult] = useState<QRScanResult | null>(null)
+  const [manualLot, setManualLot] = useState('')
+  const [manualExpiry, setManualExpiry] = useState('')
+  const [scanMissingLot, setScanMissingLot] = useState(false)
+  const [scanMissingExpiry, setScanMissingExpiry] = useState(false)
   const [confirmQuantity, setConfirmQuantity] = useState(1)
   const [isPending, startTransition] = useTransition()
 
@@ -45,6 +55,12 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
 
   function handleScan(result: QRScanResult) {
     setScanResult(result)
+    const lot = result.payload.lot_number?.trim() ?? ''
+    const expiry = result.payload.expiry_date?.trim() ?? ''
+    setManualLot(lot)
+    setManualExpiry(expiry)
+    setScanMissingLot(!lot)
+    setScanMissingExpiry(!expiry)
     if (result.isValid) {
       // Auto-match REF to order items
       if (selectedOrder && result.payload.ref) {
@@ -62,11 +78,12 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
 
   function handleAssign() {
     if (!scanResult?.isValid || !selectedItemId) return
-    if (!scanResult.payload.lot_number?.trim()) {
+    const lotNumber = manualLot.trim()
+    if (!lotNumber) {
       toast.error('LOT number is required. Enter it manually if it was not in the scan.')
       return
     }
-    if (!scanResult.payload.expiry_date) {
+    if (!manualExpiry) {
       toast.error('Expiry date is required. Enter it manually or check the QR format.')
       return
     }
@@ -76,15 +93,19 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
         product_id: selectedItem?.product_id,
         order_item_id: selectedItemId,
         ref: scanResult.payload.ref ?? '',
-        lot_number: scanResult.payload.lot_number ?? '',
-        expiry_date: scanResult.payload.expiry_date!,
+        lot_number: lotNumber,
+        expiry_date: manualExpiry,
         raw_qr_payload: scanResult.payload.raw,
         quantity: confirmQuantity,
       })
 
       if (result.error) { toast.error(result.error); return }
-      toast.success(`Batch assigned: LOT ${scanResult.payload.lot_number}`)
+      toast.success(`Batch assigned: LOT ${lotNumber}`)
       setScanResult(null)
+      setManualLot('')
+      setManualExpiry('')
+      setScanMissingLot(false)
+      setScanMissingExpiry(false)
       setSelectedItemId('')
     })
   }
@@ -121,12 +142,20 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                 <CardContent className="space-y-3">
                   <Select value={selectedOrderId} onValueChange={(v) => { setSelectedOrderId(v ?? ''); setSelectedItemId('') }}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose a confirmed order…" />
+                      <SelectValue placeholder="Choose a confirmed order…">
+                        {selectedOrder ? formatOrderLabel(selectedOrder) : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {openOrders.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.order_number} — {(o.customer as any)?.name}
+                        <SelectItem key={o.id} value={o.id} label={formatOrderLabel(o)}>
+                          <div className="flex flex-col items-start gap-0.5 py-0.5">
+                            <span className="font-medium">{o.order_number}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {(o.customer as { name?: string } | null)?.name ?? 'Unknown customer'}
+                              {o.created_at ? ` · ${formatDateTime(o.created_at)}` : ''}
+                            </span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -180,7 +209,7 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
 
                   {scanResult?.isValid && selectedItemId && (
                     <div className="space-y-3 pt-2">
-                      {!scanResult.payload.lot_number && (
+                      {scanMissingLot && (
                         <Alert variant="warning">
                           <AlertIcon variant="warning"><AlertTriangle /></AlertIcon>
                           <div>
@@ -190,25 +219,19 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                         </Alert>
                       )}
 
-                      {!scanResult.payload.lot_number && (
+                      {scanMissingLot && (
                         <div className="space-y-1.5">
                           <Label className="text-xs">LOT number *</Label>
                           <Input
-                            placeholder="e.g. LOT2024-8841"
-                            onChange={(e) => {
-                              if (scanResult) {
-                                setScanResult({
-                                  ...scanResult,
-                                  payload: { ...scanResult.payload, lot_number: e.target.value.trim() },
-                                })
-                              }
-                            }}
+                            value={manualLot}
+                            placeholder="e.g. 02-41-25-2326"
+                            onChange={(e) => setManualLot(e.target.value)}
                             className="font-mono"
                           />
                         </div>
                       )}
 
-                      {!scanResult.payload.expiry_date && (
+                      {scanMissingExpiry && (
                         <Alert variant="warning">
                           <AlertIcon variant="warning"><AlertTriangle /></AlertIcon>
                           <div>
@@ -218,19 +241,13 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                         </Alert>
                       )}
 
-                      {!scanResult.payload.expiry_date && (
+                      {scanMissingExpiry && (
                         <div className="space-y-1.5">
                           <Label className="text-xs">Expiry Date *</Label>
                           <Input
                             type="date"
-                            onChange={(e) => {
-                              if (scanResult) {
-                                setScanResult({
-                                  ...scanResult,
-                                  payload: { ...scanResult.payload, expiry_date: e.target.value }
-                                })
-                              }
-                            }}
+                            value={manualExpiry}
+                            onChange={(e) => setManualExpiry(e.target.value)}
                             className="font-mono"
                           />
                         </div>
@@ -246,9 +263,13 @@ export function TraceabilityClient({ openOrders, initialOrderId, initialSearch =
                         />
                       </div>
 
-                      <Button onClick={handleAssign} disabled={isPending} className="w-full gap-2">
+                      <Button
+                        onClick={handleAssign}
+                        disabled={isPending || !manualLot.trim() || !manualExpiry}
+                        className="w-full gap-2"
+                      >
                         <Package className="h-4 w-4" />
-                        Assign LOT {scanResult.payload.lot_number} to order
+                        Assign LOT {manualLot.trim() || '…'} to order
                       </Button>
                     </div>
                   )}

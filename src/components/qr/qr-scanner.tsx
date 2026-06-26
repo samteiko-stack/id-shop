@@ -32,41 +32,78 @@ const GS1_AI_MAP: Record<string, keyof ParsedQRPayload> = {
   '21': 'lot_number', // Serial number (fallback)
 }
 
-function parseGS1(raw: string): ParsedQRPayload | null {
-  // GS1 uses FNC1 character (ASCII 29, GS char) as AI separator
-  // HID scanners often replace it with a group separator or just omit it
-  // Pattern: (AI)value or \x1d + AI + value
-  const gs1Pattern = /\((\d{2,4})\)([^(]+)/g
-  const altPattern = /[\x1d\x1e]([\d]{2,4})/g
+/** GS1 YYMMDD → ISO date (00–49 → 2000–2049, 50–99 → 1950–1999). */
+function parseGs1Date(value: string): string | null {
+  if (!/^\d{6}$/.test(value)) return null
+  const yy = parseInt(value.slice(0, 2), 10)
+  const mm = value.slice(2, 4)
+  const dd = value.slice(4, 6)
+  const year = yy <= 49 ? 2000 + yy : 1900 + yy
+  return `${year}-${mm}-${dd}`
+}
 
+function applyGs1Field(result: ParsedQRPayload, ai: string, value: string): boolean {
+  const field = GS1_AI_MAP[ai]
+  if (!field) return false
+
+  let normalized = value.trim()
+  if (ai === '17') {
+    normalized = parseGs1Date(normalized) ?? normalized
+  }
+
+  ;(result as Record<string, string>)[field] = normalized
+  return true
+}
+
+function parseGS1(raw: string): ParsedQRPayload | null {
   const result: ParsedQRPayload = { raw, parseFormat: 'gs1' }
   let matched = false
 
-  let match
   const bracketRegex = /\((\d{2,4})\)([^()]*)/g
+  let match
   while ((match = bracketRegex.exec(raw)) !== null) {
-    const ai = match[1]
-    let value = match[2].trim()
-
-    if (ai === '17') {
-      // GS1 date format: YYMMDD → YYYY-MM-DD
-      if (/^\d{6}$/.test(value)) {
-        const yy = parseInt(value.slice(0, 2))
-        const mm = value.slice(2, 4)
-        const dd = value.slice(4, 6)
-        const year = yy >= 0 && yy < 30 ? 2000 + yy : 1900 + yy
-        value = `${year}-${mm}-${dd}`
-      }
-    }
-
-    const field = GS1_AI_MAP[ai]
-    if (field) {
-      ;(result as any)[field] = value
-      matched = true
-    }
+    if (applyGs1Field(result, match[1], match[2])) matched = true
   }
 
   return matched ? result : null
+}
+
+/** UDI DataMatrix output without brackets, e.g. 01{GTIN}10{LOT}11{YYMMDD}17{YYMMDD} */
+function parseGS1ElementString(raw: string): ParsedQRPayload | null {
+  const compact = raw.replace(/\x1d/g, '').trim()
+  if (!/^01\d{14}/.test(compact)) return null
+
+  const patterns = [
+    /^01(\d{14})10(.+?)11(\d{6})17(\d{6})$/,
+    /^01(\d{14})17(\d{6})10(.+?)11(\d{6})$/,
+    /^01(\d{14})10(.+?)17(\d{6})$/,
+    /^01(\d{14})17(\d{6})10(.+?)$/,
+  ]
+
+  for (const pattern of patterns) {
+    const m = compact.match(pattern)
+    if (!m) continue
+
+    const result: ParsedQRPayload = { raw, parseFormat: 'gs1' }
+    if (pattern.source.includes('10(.+?)11')) {
+      applyGs1Field(result, '01', m[1])
+      applyGs1Field(result, '10', m[2])
+      if (m[3]?.length === 6 && m[4]?.length === 6) {
+        applyGs1Field(result, '11', m[3])
+        applyGs1Field(result, '17', m[4])
+      } else if (m[3]?.length === 6) {
+        applyGs1Field(result, '17', m[3])
+      }
+    } else if (pattern.source.startsWith('^01(\\d{14})17')) {
+      applyGs1Field(result, '01', m[1])
+      applyGs1Field(result, '17', m[2])
+      applyGs1Field(result, '10', m[3])
+    }
+
+    if (result.ref || result.lot_number) return result
+  }
+
+  return null
 }
 
 function parseDelimited(raw: string): ParsedQRPayload | null {
@@ -130,17 +167,14 @@ function normalizeDate(dateStr: string): string {
     return `${yyyy}-${mm}-01`
   }
   if (/^\d{6}$/.test(dateStr)) {
-    const yy = parseInt(dateStr.slice(0, 2))
-    const mm = dateStr.slice(2, 4)
-    const year = yy >= 0 && yy < 30 ? 2000 + yy : 1900 + yy
-    return `${year}-${mm}-01`
+    return parseGs1Date(dateStr) ?? dateStr
   }
   return dateStr
 }
 
 /** Single product REF barcode (e.g. AB-53AN, B31040, 3M-RX-U200) */
 function parsePlainRef(raw: string): ParsedQRPayload | null {
-  const value = raw.trim()
+  const value = raw.trim().replace(/:$/, '')
   if (!value || value.length > 64) return null
   if (/[:=|{}]/.test(value) || value.includes('(')) return null
   if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(value)) return null
@@ -155,10 +189,16 @@ function parsePlainRef(raw: string): ParsedQRPayload | null {
 export function parseQRPayload(raw: string): ParsedQRPayload {
   const trimmed = raw.trim()
 
-  // Try GS1 format first (has brackets around AIs)
+  // GS1 with human-readable brackets: (01)... (10)... (17)...
   if (trimmed.includes('(') && trimmed.includes(')')) {
     const gs1Result = parseGS1(trimmed)
     if (gs1Result) return gs1Result
+  }
+
+  // GS1 UDI DataMatrix (no brackets) — common on medical device labels
+  if (/^01\d/.test(trimmed)) {
+    const elementResult = parseGS1ElementString(trimmed)
+    if (elementResult) return elementResult
   }
 
   // Try JSON

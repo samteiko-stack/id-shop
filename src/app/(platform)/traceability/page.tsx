@@ -17,7 +17,7 @@ export default async function TraceabilityPage({
   const { data: openOrders } = await supabase
     .from('orders')
     .select(`
-      id, order_number, customer:customers(name),
+      id, order_number, created_at, customer:customers(name),
       items:order_items(
         id, product_id, quantity,
         product:products(id, name, ref),
