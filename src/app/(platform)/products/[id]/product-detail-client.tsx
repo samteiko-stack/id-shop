@@ -36,7 +36,6 @@ export function ProductDetailClient({ product, categories, families, batches, or
     invoice_notes:   product.invoice_notes ?? null,
     slug:            product.slug ?? null,
     ref:             product.ref,
-    brand:           product.brand ?? null,
     category_id:     product.category_id,
     family_id:       product.family_id ?? null,
     unit_price:      product.unit_price,

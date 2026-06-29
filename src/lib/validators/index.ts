@@ -19,7 +19,6 @@ export const productSchema = z.object({
   invoice_notes:   z.string().max(1000).nullable().optional(),
   slug:            z.string().max(200).regex(/^[a-z0-9-]*$/, 'Lowercase, numbers, hyphens only').nullable().optional(),
   ref:             z.string().min(1, 'REF is required').max(100),
-  brand:           z.string().max(200).nullable().optional(),
   category_id:     z.string().uuid().nullable().optional(),
   unit_price:      z.number().min(0, 'Price must be positive'),
   cost_price:      z.number().min(0).nullable().optional(),

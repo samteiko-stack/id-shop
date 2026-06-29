@@ -237,7 +237,7 @@ export function getCachedCategoryPageData(slugPath: string[]) {
       const { data: products } = await supabase
         .from('products')
         .select(
-          'id, name, secondary_name, ref, slug, unit_price, currency, brand, unit, image_url, product_family, display_order, is_featured, hide_in_shop, family:product_families(id, name, image_url)',
+          'id, name, secondary_name, ref, slug, unit_price, currency, unit, image_url, product_family, display_order, is_featured, hide_in_shop, family:product_families(id, name, image_url)',
         )
         .eq('category_id', currentCategory.id)
         .eq('hide_in_shop', false)

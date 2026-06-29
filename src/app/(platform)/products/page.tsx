@@ -24,7 +24,7 @@ export default async function ProductsPage({
   const [productsResult, categories, families] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, ref, description, category_id, family_id, unit_price, currency, is_active, image_url, product_family, display_order, brand, created_at, updated_at, category:categories(id, name)', { count: 'exact' })
+      .select('id, name, ref, description, category_id, family_id, unit_price, currency, is_active, image_url, product_family, display_order, created_at, updated_at, category:categories(id, name)', { count: 'exact' })
       .is('deleted_at', null)
       .order('name')
       .range(from, to),
@@ -34,6 +34,7 @@ export default async function ProductsPage({
 
   const totalCount = productsResult.count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+  const loadError = productsResult.error?.message ?? null
 
   return (
     <ProductsClient
@@ -41,6 +42,7 @@ export default async function ProductsPage({
       categories={(categories as Category[]) ?? []}
       families={(families as unknown as ProductFamily[]) ?? []}
       pagination={{ page, totalPages, totalCount, pageSize }}
+      loadError={loadError}
     />
   )
 }

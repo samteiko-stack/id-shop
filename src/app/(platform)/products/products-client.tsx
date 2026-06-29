@@ -16,6 +16,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { TableRowActionsMenu } from '@/components/ui/table-row-actions-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { BulkActionsBar } from '@/components/ui/bulk-actions-bar'
 import { createArchiveAction, createExportAction } from '@/lib/bulk-actions'
 import { ProductForm } from './product-form'
@@ -31,17 +32,18 @@ interface Props {
   categories: Category[]
   families: ProductFamily[]
   pagination: PaginationInfo
+  loadError?: string | null
 }
 
 const EMPTY_PRODUCT: ProductInput = {
   name: '', secondary_name: null, description: '', invoice_notes: null, slug: null,
-  ref: '', brand: null, category_id: null, family_id: null,
+  ref: '', category_id: null, family_id: null,
   unit_price: 0, cost_price: null, currency: 'SEK', unit: null, weight_kg: null,
   is_active: true, is_featured: false, hide_in_shop: false, is_promotional: false,
   alert_quantity: 0, image_url: null, product_family: null, display_order: 0,
 }
 
-export function ProductsClient({ initialProducts, categories, families, pagination }: Props) {
+export function ProductsClient({ initialProducts, categories, families, pagination, loadError }: Props) {
   const router = useRouter()
   const { canWrite, canDelete } = useRole()
   const products = initialProducts
@@ -76,7 +78,7 @@ export function ProductsClient({ initialProducts, categories, families, paginati
     setForm({
       name: product.name, secondary_name: product.secondary_name ?? null,
       description: product.description ?? '', invoice_notes: product.invoice_notes ?? null,
-      slug: product.slug ?? null, ref: product.ref, brand: product.brand ?? null,
+      slug: product.slug ?? null, ref: product.ref,
       category_id: product.category_id ?? null, family_id: product.family_id ?? null,
       unit_price: product.unit_price, cost_price: product.cost_price ?? null,
       currency: product.currency, unit: product.unit ?? null, weight_kg: product.weight_kg ?? null,
@@ -212,6 +214,12 @@ export function ProductsClient({ initialProducts, categories, families, paginati
 
   return (
     <div className="space-y-5">
+      {loadError && (
+        <Alert variant="destructive">
+          <AlertTitle>Could not load products</AlertTitle>
+          <AlertDescription>{loadError}</AlertDescription>
+        </Alert>
+      )}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 flex-1 flex-wrap">
           <div className="relative flex-1 max-w-sm">

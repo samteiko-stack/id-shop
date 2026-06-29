@@ -234,14 +234,9 @@ export function ProductForm({
         <Field label="Secondary name" hint="Alternative name or variant description">
             <Input value={form.secondary_name ?? ''} onChange={e => setForm({ ...form, secondary_name: e.target.value || null })} disabled={isPending} placeholder="e.g. Bio-Gide 25×25 mm" />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Product code (REF)" required error={errors.ref}>
-            <Input value={form.ref} onChange={e => setForm({ ...form, ref: e.target.value })} disabled={isPending} className="font-mono" />
-          </Field>
-          <Field label="Brand">
-            <Input value={form.brand ?? ''} onChange={e => setForm({ ...form, brand: e.target.value || null })} disabled={isPending} placeholder="e.g. Geistlich" />
-          </Field>
-        </div>
+        <Field label="Product code (REF)" required error={errors.ref}>
+          <Input value={form.ref} onChange={e => setForm({ ...form, ref: e.target.value })} disabled={isPending} className="font-mono" />
+        </Field>
         <Field label="Category">
           {familyLocked ? (
             <div className="h-10 flex items-center px-3 rounded-lg border border-input bg-muted/50 text-sm text-muted-foreground cursor-not-allowed">

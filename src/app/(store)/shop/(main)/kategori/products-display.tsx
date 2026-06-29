@@ -52,7 +52,6 @@ function ProductRow({
           <p className="font-semibold text-sm text-foreground leading-tight">{product.name}</p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
             <span className="font-mono">REF: {product.ref}</span>
-            {product.brand && <span>{product.brand}</span>}
             {product.unit && <span>{product.unit}</span>}
           </div>
         </div>
@@ -152,13 +151,7 @@ function GroupedDisplay({ products, isApproved, isLoggedIn, discountRate = 0 }: 
 }
 
 export function ProductsDisplay({ products, displayStyle, breadcrumbs, isApproved, isLoggedIn, discountRate = 0 }: Props) {
-  const [brandFilter, setBrandFilter] = useState('all')
   const [familyFilter, setFamilyFilter] = useState('all')
-
-  const brands = useMemo(() => {
-    const set = new Set(products.map(p => p.brand).filter(Boolean) as string[])
-    return Array.from(set).sort()
-  }, [products])
 
   const families = useMemo(() => {
     const set = new Set(products.map(p => getFamilyName(p)).filter(Boolean) as string[])
@@ -167,11 +160,10 @@ export function ProductsDisplay({ products, displayStyle, breadcrumbs, isApprove
 
   const filtered = useMemo(() => {
     return products.filter(p => {
-      const matchBrand  = brandFilter === 'all'  || p.brand === brandFilter
       const matchFamily = familyFilter === 'all' || getFamilyName(p) === familyFilter
-      return matchBrand && matchFamily
+      return matchFamily
     })
-  }, [products, brandFilter, familyFilter])
+  }, [products, familyFilter])
 
   return (
     <div className="space-y-6">
@@ -179,30 +171,22 @@ export function ProductsDisplay({ products, displayStyle, breadcrumbs, isApprove
       <Breadcrumb items={breadcrumbs} />
 
       {/* Filters */}
-      {(brands.length > 0 || families.length > 0) && (
+      {families.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-muted/30 rounded-lg border border-border">
           <span className="text-sm font-medium text-muted-foreground shrink-0">Filtrera:</span>
-          
+
           <div className="flex flex-col sm:flex-row gap-2 flex-1">
-            {brands.length > 0 && (
-              <FilterSelect value={brandFilter} onChange={e => setBrandFilter(e.target.value)} className="w-full sm:w-48">
-                <option value="all">Alla märken</option>
-                {brands.map(b => <option key={b} value={b}>{b}</option>)}
-              </FilterSelect>
-            )}
-            {families.length > 0 && (
-              <FilterSelect value={familyFilter} onChange={e => setFamilyFilter(e.target.value)} className="w-full sm:w-64">
-                <option value="all">Alla familjer</option>
-                {families.map(f => <option key={f} value={f}>{f}</option>)}
-              </FilterSelect>
-            )}
+            <FilterSelect value={familyFilter} onChange={e => setFamilyFilter(e.target.value)} className="w-full sm:w-64">
+              <option value="all">Alla familjer</option>
+              {families.map(f => <option key={f} value={f}>{f}</option>)}
+            </FilterSelect>
           </div>
 
           <div className="flex items-center gap-3 sm:ml-auto shrink-0">
-            <button 
-              onClick={() => { setBrandFilter('all'); setFamilyFilter('all') }} 
+            <button
+              onClick={() => setFamilyFilter('all')}
               className="text-xs text-primary hover:underline disabled:opacity-0 disabled:pointer-events-none transition-opacity"
-              disabled={brandFilter === 'all' && familyFilter === 'all'}
+              disabled={familyFilter === 'all'}
             >
               Rensa filter
             </button>

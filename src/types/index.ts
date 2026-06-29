@@ -60,7 +60,6 @@ export interface Product {
   invoice_notes: string | null
   slug: string | null
   ref: string
-  brand: string | null
   category_id: string | null
   unit_price: number
   cost_price: number | null
