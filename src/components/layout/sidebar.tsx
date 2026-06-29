@@ -162,8 +162,8 @@ export function Sidebar() {
       className="hidden md:flex flex-col h-full w-64 shrink-0 border-r border-white/10"
     >
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-3.5 h-14 border-b border-white/10 shrink-0">
-        <img src="/logo-white.png" alt="Infinity Dental" className="h-[26px] w-auto" />
+      <div className="flex items-center gap-2.5 px-3.5 h-16 border-b border-white/10 shrink-0">
+        <img src="/logo-white.png" alt="Infinity Dental" className="h-12 w-auto" />
       </div>
 
       {/* Navigation */}

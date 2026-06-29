@@ -52,7 +52,7 @@ export function ShopHeader({ customer, showAdminLink = false, cartCount, topCate
 
             {/* Logo */}
             <Link href="/" className="shrink-0">
-              <img src="/logo-blue.png" alt="Infinity Dental" className="h-8 w-auto" />
+              <img src="/logo-blue.png" alt="Infinity Dental" className="h-8 w-auto md:h-12" />
             </Link>
 
             {/* Desktop nav */}
