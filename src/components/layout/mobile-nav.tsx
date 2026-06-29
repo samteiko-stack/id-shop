@@ -121,7 +121,7 @@ export function MobileNav() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-16 border-b border-white/10 shrink-0">
-          <img src="/logo-white.png" alt="ID Shop" className="h-7 w-auto" />
+          <img src="/logo-white.png" alt="Infinity Dental" className="h-7 w-auto" />
           <button
             onClick={close}
             className="flex items-center justify-center h-8 w-8 rounded-md text-white/50 hover:text-white hover:bg-white/10 transition-colors"

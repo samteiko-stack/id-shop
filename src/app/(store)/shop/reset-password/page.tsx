@@ -51,7 +51,7 @@ export default function ShopResetPasswordPage() {
         <div className="w-full max-w-sm">
           <div className="flex items-center justify-between mb-10">
             <Link href="/shop" className="inline-block lg:hidden">
-              <img src="/logo-blue.png" alt="ID Shop" className="h-7 w-auto" />
+              <img src="/logo-blue.png" alt="Infinity Dental" className="h-7 w-auto" />
             </Link>
             <Link href="/shop/login" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors ml-auto">
               <ArrowLeft className="h-4 w-4" />

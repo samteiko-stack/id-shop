@@ -58,7 +58,7 @@ export function ShopFooter({ categoryGroups = [] }: ShopFooterProps) {
     <BrandSurface as="footer" className="mt-auto" waves={false} variant="footer">
       <StorefrontContainer className="py-14 lg:py-16">
         <Link href="/" className="inline-block mb-10 lg:mb-12">
-          <img src="/logo-white.png" alt="ID Shop" className="h-12 w-auto" />
+          <img src="/logo-white.png" alt="Infinity Dental" className="h-12 w-auto" />
         </Link>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 lg:gap-16">

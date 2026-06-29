@@ -25,7 +25,7 @@ export function AuthBrandPanel({
     >
       <div className="flex h-full min-h-0 flex-col justify-between">
         <Link href={logoHref}>
-          <img src="/logo-white.png" alt="ID Shop" className="h-8 w-auto" />
+          <img src="/logo-white.png" alt="Infinity Dental" className="h-8 w-auto" />
         </Link>
 
         <div>{children}</div>

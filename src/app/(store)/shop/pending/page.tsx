@@ -6,7 +6,7 @@ export default function PendingApprovalPage() {
     <div className="min-h-dvh bg-background flex items-center justify-center px-8">
       <div className="w-full max-w-sm text-center">
         <Link href="/shop" className="inline-block mb-10">
-          <img src="/logo-blue.png" alt="ID Shop" className="h-7 w-auto" />
+          <img src="/logo-blue.png" alt="Infinity Dental" className="h-7 w-auto" />
         </Link>
 
         <div className="h-14 w-14 bg-muted flex items-center justify-center mx-auto mb-6">

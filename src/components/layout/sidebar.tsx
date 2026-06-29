@@ -163,7 +163,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-3.5 h-14 border-b border-white/10 shrink-0">
-        <img src="/logo-white.png" alt="ID Shop" className="h-[26px] w-auto" />
+        <img src="/logo-white.png" alt="Infinity Dental" className="h-[26px] w-auto" />
       </div>
 
       {/* Navigation */}
